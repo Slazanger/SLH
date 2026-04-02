@@ -6,41 +6,41 @@
              x:DataType="vm:CharacterLookupViewModel">
 
     <ScrollViewer>
-        <StackPanel Spacing="16" Margin="0,4,0,0">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBox Watermark="Character name" Text="{Binding SearchName}" MinWidth="280"/>
-                <Button Content="Look up" Command="{Binding LookupCommand}" Padding="16,8"/>
+        <StackPanel Spacing="6" Margin="0,2,0,0">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBox Watermark="Character" Text="{Binding SearchName}" MinWidth="200"/>
+                <Button Content="Look up" Command="{Binding LookupCommand}"/>
             </StackPanel>
-            <TextBlock Text="{Binding Status}" Foreground="#f97316" TextWrapping="Wrap"
+            <TextBlock Text="{Binding Status}" Foreground="#F57C00" TextWrapping="Wrap" FontSize="10"
                        IsVisible="{Binding ShowStatus}"/>
 
-            <Border Classes="glass" IsVisible="{Binding HasResult}">
-                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="4">
-                    <Border Grid.RowSpan="5" Width="120" Height="120" Margin="0,0,16,0" CornerRadius="8" ClipToBounds="True" Background="#111827">
+            <Border Classes="glass" IsVisible="{Binding HasResult}" Padding="6">
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="0">
+                    <Border Grid.RowSpan="5" Width="80" Height="80" Margin="0,0,8,0" CornerRadius="0" ClipToBounds="True" Background="#0a0e14" BorderBrush="#2A4B7C" BorderThickness="1">
                         <Image Source="{Binding PortraitBitmap}" Stretch="UniformToFill"/>
                     </Border>
 
-                    <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding ResolvedName}" FontWeight="Bold" FontSize="18"/>
-                    <TextBlock Grid.Column="1" Grid.Row="1" Margin="0,6,0,0">
-                        <Run Text="Corporation: "/><Run Text="{Binding CorpName}"/> <Run Text="["/><Run Text="{Binding CorpTicker}"/><Run Text="]"/>
+                    <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding ResolvedName}" FontWeight="SemiBold" FontSize="12" Foreground="#e8eef4"/>
+                    <TextBlock Grid.Column="1" Grid.Row="1" Margin="0,2,0,0" FontSize="10">
+                        <Run Text="Corp " Foreground="#8a9aaa"/><Run Text="{Binding CorpName}"/> <Run Text="["/><Run Text="{Binding CorpTicker}"/><Run Text="]"/>
                     </TextBlock>
-                    <TextBlock Grid.Column="1" Grid.Row="2" Margin="0,8,0,0">
-                        <Run Text="Threat: "/><Run Text="{Binding ThreatLabel}"/><Run Text=" ("/><Run Text="{Binding ThreatScore}"/><Run Text=")"/>
+                    <TextBlock Grid.Column="1" Grid.Row="2" Margin="0,4,0,0" FontSize="10">
+                        <Run Text="Threat " Foreground="#8a9aaa"/><Run Text="{Binding ThreatLabel}"/><Run Text=" ("/><Run Text="{Binding ThreatScore}"/><Run Text=")"/>
                     </TextBlock>
-                    <TextBlock Grid.Column="1" Grid.Row="3" Margin="0,8,0,0">
-                        <Run Text="Ships destroyed / lost: "/><Run Text="{Binding ShipsDestroyed}"/><Run Text=" / "/><Run Text="{Binding ShipsLost}"/>
+                    <TextBlock Grid.Column="1" Grid.Row="3" Margin="0,2,0,0" FontSize="10">
+                        <Run Text="K/L " Foreground="#8a9aaa"/><Run Text="{Binding ShipsDestroyed}"/><Run Text="/"/><Run Text="{Binding ShipsLost}"/>
                     </TextBlock>
 
-                    <ItemsControl Grid.Column="1" Grid.Row="4" Margin="0,12,0,0" ItemsSource="{Binding ActivityBuckets}">
+                    <ItemsControl Grid.Column="1" Grid.Row="4" Margin="0,6,0,0" ItemsSource="{Binding ActivityBuckets}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" Spacing="2"/>
+                                <StackPanel Orientation="Horizontal" Spacing="1"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="sys:Int32">
-                                <Border Width="10" MaxHeight="80" MinHeight="4" VerticalAlignment="Bottom"
-                                        Height="{Binding}" Background="#38bdf8" CornerRadius="1"/>
+                                <Border Width="7" MaxHeight="44" MinHeight="2" VerticalAlignment="Bottom"
+                                        Height="{Binding}" Background="#00a0b0" CornerRadius="0"/>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

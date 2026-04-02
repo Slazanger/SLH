@@ -1,20 +1,101 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- EVE-like palette: deep black/blue, steel borders, cyan accent -->
     <Style Selector="Window">
-        <Setter Property="Background" Value="#0b0f14"/>
+        <Setter Property="Background" Value="#05070A"/>
+        <Setter Property="FontSize" Value="11"/>
     </Style>
+
+    <Style Selector="TextBlock">
+        <Setter Property="Foreground" Value="#c4ccd4"/>
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <Style Selector="Button">
+        <Setter Property="Padding" Value="8,3"/>
+        <Setter Property="MinHeight" Value="22"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="Background" Value="#141a22"/>
+        <Setter Property="BorderBrush" Value="#3d4f66"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Button:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#1c2530"/>
+    </Style>
+
+    <Style Selector="TextBox">
+        <Setter Property="Padding" Value="6,3"/>
+        <Setter Property="MinHeight" Value="22"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="Background" Value="#0a0e14"/>
+        <Setter Property="BorderBrush" Value="#3d4f66"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+    <Style Selector="CheckBox">
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <Style Selector="NumericUpDown">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="MinHeight" Value="22"/>
+    </Style>
+
     <Style Selector="TabControl">
-        <Setter Property="Margin" Value="0,8,0,0"/>
+        <Setter Property="Margin" Value="0"/>
     </Style>
     <Style Selector="TabItem">
-        <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="Padding" Value="16,10"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="Padding" Value="10,4"/>
+        <Setter Property="Margin" Value="0,0,1,0"/>
     </Style>
+    <Style Selector="TabItem:selected">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="ListBox">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="ListBoxItem">
+        <Setter Property="Padding" Value="2,1"/>
+        <Setter Property="MinHeight" Value="24"/>
+    </Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="#1a2a38"/>
+    </Style>
+    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#152028"/>
+    </Style>
+
+    <Style Selector="Expander">
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+    <Style Selector="Expander /template/ ToggleButton">
+        <Setter Property="Padding" Value="4,2"/>
+    </Style>
+
+    <Style Selector="ScrollViewer">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+
     <Style Selector="Border.glass">
-        <Setter Property="Background" Value="#1a2332"/>
-        <Setter Property="CornerRadius" Value="8"/>
-        <Setter Property="Padding" Value="12"/>
-        <Setter Property="BorderBrush" Value="#2d3a4d"/>
+        <Setter Property="Background" Value="#0d1118"/>
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="Padding" Value="6"/>
+        <Setter Property="BorderBrush" Value="#2A4B7C"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+    <Style Selector="Border.glass-subtle">
+        <Setter Property="Background" Value="#0a0c10"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="BorderBrush" Value="#2d3d50"/>
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
 </Styles>
