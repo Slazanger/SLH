@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SLH.ViewModels"
+             x:Class="SLH.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+    <ScrollViewer>
+        <StackPanel Spacing="14" MaxWidth="560" Margin="0,4,0,0">
+            <TextBlock Text="EVE application" FontWeight="Bold" FontSize="16"/>
+            <TextBlock TextWrapping="Wrap" Opacity="0.75" FontSize="12"
+                       Text="Create an application at https://developers.eveonline.com/ with callback URL exactly: http://127.0.0.1:&lt;port&gt;/callback/ (match the port below). Use PKCE (no client secret required)."/>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Client ID"/>
+                <TextBox Text="{Binding EveClientId}" Watermark="EVE application Client ID"/>
+            </StackPanel>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Callback port (127.0.0.1)"/>
+                <NumericUpDown Value="{Binding CallbackPort}" Minimum="1024" Maximum="65535" Increment="1"/>
+            </StackPanel>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Chat logs folder (Local_*.txt)"/>
+                <TextBox Text="{Binding ChatLogsFolder}" Watermark="Path to EVE ChatLogs"/>
+            </StackPanel>
+
+            <CheckBox Content="Enable zKillboard intel (threat heuristic)" IsChecked="{Binding EnableZkillIntel}"/>
+
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button Content="Save settings" Command="{Binding SaveCommand}" Padding="16,8"/>
+                <Button Content="Log out (clear EVE session)" Command="{Binding LogoutCommand}" Padding="16,8"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

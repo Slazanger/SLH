@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sys="using:System"
+             xmlns:conv="using:Avalonia.Data.Converters"
+             xmlns:vm="using:SLH.ViewModels"
+             x:Class="SLH.Views.LocalAnalyserView"
+             x:DataType="vm:LocalAnalyserViewModel">
+
+    <Grid ColumnDefinitions="*,320" Margin="0,4,0,0">
+        <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="0,0,12,0">
+            <Expander Grid.Row="0" IsExpanded="{Binding LocalThreatsExpanded, Mode=TwoWay}" Header="Local Threats" Margin="0,0,0,8">
+                <StackPanel Spacing="8" Margin="0,8,0,0">
+                    <TextBlock Text="Paste local (one name per line or log lines)" Opacity="0.75" FontSize="12"/>
+                    <TextBox Text="{Binding PasteText}" AcceptsReturn="True" Height="80" TextWrapping="Wrap"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Apply paste" Command="{Binding ApplyPasteCommand}" Padding="12,6"/>
+                        <Button Content="Clear list" Command="{Binding ClearLocalCommand}" Padding="12,6"/>
+                    </StackPanel>
+                </StackPanel>
+            </Expander>
+
+            <Border Grid.Row="1" Classes="glass">
+                <ListBox ItemsSource="{Binding Pilots}" SelectedItem="{Binding SelectedPilot}" Background="Transparent">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PilotRowViewModel">
+                            <Grid ColumnDefinitions="40,*,Auto,Auto" Margin="4">
+                                <Border Grid.Column="0" Width="36" Height="36" CornerRadius="4" Background="#111827" VerticalAlignment="Center">
+                                    <TextBlock Text="♦" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="8,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Subtitle}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding Name}" Opacity="0.6" FontSize="11"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                    <TextBlock Text="☠" Opacity="0.7"/>
+                                    <TextBlock Text="{Binding ThreatScore}" Foreground="#f97316" FontWeight="Bold" MinWidth="24"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="3" Text="✓" Foreground="#22c55e" VerticalAlignment="Center"
+                                           IsVisible="{Binding IsFriendly}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+        </Grid>
+
+        <Border Grid.Column="1" Classes="glass">
+            <ScrollViewer>
+                <StackPanel Spacing="10">
+                    <TextBlock Text="Player Info" FontWeight="Bold" FontSize="16"/>
+
+                    <StackPanel IsVisible="{Binding SelectedPilot, Converter={x:Static conv:ObjectConverters.IsNotNull}}" Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border Width="56" Height="56" CornerRadius="6" Background="#111827">
+                                <TextBlock Text="♦" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="20"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SelectedPilot.Subtitle}" FontWeight="Bold" TextWrapping="Wrap"/>
+                                <Border CornerRadius="4" Padding="8,4" Margin="0,6,0,0" HorizontalAlignment="Left" Background="#b91c1c">
+                                    <TextBlock Foreground="White" FontWeight="Bold">
+                                        <Run Text="{Binding SelectedPilot.ThreatLabel}"/>
+                                        <Run Text=" "/>
+                                        <Run Text="{Binding SelectedPilot.ThreatScore}"/>
+                                    </TextBlock>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <TextBlock TextWrapping="Wrap">
+                            <Run Text="Recent kills: "/><Run Text="{Binding SelectedPilot.ShipsDestroyed}"/>
+                            <LineBreak/>
+                            <Run Text="Recent losses: "/><Run Text="{Binding SelectedPilot.ShipsLost}"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding SelectedPilot.ShipsHint}" TextWrapping="Wrap" Opacity="0.85"/>
+                        <TextBlock Text="{Binding SelectedPilot.ActivityRegion}" FontWeight="SemiBold"/>
+                        <TextBlock Text="Active times (UTC) — heuristic from zKill months" Opacity="0.6" FontSize="11"/>
+                        <ItemsControl ItemsSource="{Binding SelectedPilot.ActivityBuckets}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="2"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="sys:Int32">
+                                    <Border Width="8" MaxHeight="72" MinHeight="4" VerticalAlignment="Bottom"
+                                            Height="{Binding}" Background="#f97316" CornerRadius="1"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="Notes" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding DetailNotes}" TextWrapping="Wrap" Opacity="0.9"/>
+                        <TextBlock Text="{Binding SelectedPilot.IntelTip}" TextWrapping="Wrap" FontStyle="Italic" Opacity="0.85"/>
+                    </StackPanel>
+
+                    <TextBlock Text="Select a pilot from the list."
+                               IsVisible="{Binding SelectedPilot, Converter={x:Static conv:ObjectConverters.IsNull}}"
+                               Opacity="0.6"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

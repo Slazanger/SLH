@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:dg="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.DataGrid"
+             xmlns:vm="using:SLH.ViewModels"
+             x:Class="SLH.Views.DscanView"
+             x:DataType="vm:DscanViewModel">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="0,4,0,0">
+        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,8">
+            <TextBlock Text="Paste directional scan (tab-separated from EVE)" Opacity="0.75"/>
+            <TextBox Text="{Binding PasteText}" AcceptsReturn="True" MinHeight="120" TextWrapping="Wrap"/>
+            <Button Content="Analyze" Command="{Binding AnalyzeCommand}" HorizontalAlignment="Left" Padding="16,8"/>
+        </StackPanel>
+
+        <Border Grid.Row="1" Classes="glass">
+            <dg:DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True"
+                         GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                <dg:DataGrid.Columns>
+                    <dg:DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                    <dg:DataGridTextColumn Header="Type" Binding="{Binding TypeName}" Width="2*"/>
+                    <dg:DataGridTextColumn Header="Distance" Binding="{Binding Distance}" Width="120"/>
+                    <dg:DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="120"/>
+                </dg:DataGrid.Columns>
+            </dg:DataGrid>
+        </Border>
+    </Grid>
+</UserControl>
