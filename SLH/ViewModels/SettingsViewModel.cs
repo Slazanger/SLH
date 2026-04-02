@@ -11,8 +11,6 @@ public partial class SettingsViewModel : ObservableObject
     private readonly EveConnectionService _eve;
     private readonly Action _onSaved;
 
-    [ObservableProperty] private string _eveClientId = "";
-    [ObservableProperty] private int _callbackPort = 49157;
     [ObservableProperty] private string _chatLogsFolder = "";
     [ObservableProperty] private bool _enableZkillIntel = true;
 
@@ -27,8 +25,6 @@ public partial class SettingsViewModel : ObservableObject
     public void Reload()
     {
         var s = _settingsStore.Load();
-        EveClientId = s.EveClientId;
-        CallbackPort = s.CallbackPort;
         ChatLogsFolder = s.ChatLogsFolder;
         EnableZkillIntel = s.EnableZkillIntel;
     }
@@ -38,8 +34,6 @@ public partial class SettingsViewModel : ObservableObject
     {
         _settingsStore.Save(new AppSettings
         {
-            EveClientId = EveClientId.Trim(),
-            CallbackPort = CallbackPort,
             ChatLogsFolder = ChatLogsFolder.Trim(),
             EnableZkillIntel = EnableZkillIntel
         });

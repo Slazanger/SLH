@@ -6,19 +6,9 @@
 
     <ScrollViewer>
         <StackPanel Spacing="8" Margin="0,2,0,0">
-            <TextBlock Text="EVE application" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8"/>
+            <TextBlock Text="EVE / ESI" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8"/>
             <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="10"
-                       Text="developers.eveonline.com — callback must be http://127.0.0.1:&lt;port&gt;/callback/ (PKCE, no secret)."/>
-
-            <StackPanel Spacing="2">
-                <TextBlock Text="Client ID" FontSize="10" Opacity="0.8"/>
-                <TextBox Text="{Binding EveClientId}" Watermark="Client ID"/>
-            </StackPanel>
-
-            <StackPanel Spacing="2">
-                <TextBlock Text="Callback port" FontSize="10" Opacity="0.8"/>
-                <NumericUpDown Value="{Binding CallbackPort}" Minimum="1024" Maximum="65535" Increment="1"/>
-            </StackPanel>
+                       Text="Client ID and callback port are compiled in (EsiBuildSettings.cs). Rebuild after changing them; callback URL must match http://127.0.0.1:&lt;port&gt;/callback/ (PKCE, no secret)."/>
 
             <StackPanel Spacing="2">
                 <TextBlock Text="ChatLogs folder" FontSize="10" Opacity="0.8"/>

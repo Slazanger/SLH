@@ -39,8 +39,7 @@ public sealed class SettingsStore : ISettingsStore
         var eveLogs = Path.Combine(docs, "EVE", "logs", "ChatLogs");
         return new AppSettings
         {
-            ChatLogsFolder = Directory.Exists(eveLogs) ? eveLogs : docs,
-            CallbackPort = 49157
+            ChatLogsFolder = Directory.Exists(eveLogs) ? eveLogs : docs
         };
     }
 }

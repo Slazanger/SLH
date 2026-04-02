@@ -31,7 +31,7 @@ public partial class App : Application
 
             ISettingsStore settingsStore = new SettingsStore();
             var secure = new SecureSessionStore();
-            var eve = new EveConnectionService(configuration, settingsStore, secure);
+            var eve = new EveConnectionService(configuration, secure);
             var header = new HeaderState();
             var zkill = new ZkillClient(configuration);
             var logWatcher = new LocalChatLogWatcher();

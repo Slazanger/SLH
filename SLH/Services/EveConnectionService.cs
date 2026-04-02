@@ -14,7 +14,6 @@ namespace SLH.Services;
 public sealed class EveConnectionService
 {
     private readonly IConfiguration _configuration;
-    private readonly ISettingsStore _settingsStore;
     private readonly SecureSessionStore _sessionStore;
     private readonly TimeSpan _httpTimeout = TimeSpan.FromMinutes(2);
 
@@ -24,10 +23,9 @@ public sealed class EveConnectionService
     private AuthDTO? _authDto;
     private CharacterDetails? _characterDetails;
 
-    public EveConnectionService(IConfiguration configuration, ISettingsStore settingsStore, SecureSessionStore sessionStore)
+    public EveConnectionService(IConfiguration configuration, SecureSessionStore sessionStore)
     {
         _configuration = configuration;
-        _settingsStore = settingsStore;
         _sessionStore = sessionStore;
     }
 
@@ -59,11 +57,10 @@ public sealed class EveConnectionService
         if (stored == null || string.IsNullOrWhiteSpace(stored.RefreshToken))
             return;
 
-        var settings = _settingsStore.Load();
-        if (string.IsNullOrWhiteSpace(settings.EveClientId))
+        if (string.IsNullOrWhiteSpace(EsiBuildSettings.EveClientId))
             return;
 
-        _sso = new SSOv2(DataSource.Tranquility, BuildCallbackUri(settings.CallbackPort), settings.EveClientId);
+        _sso = new SSOv2(DataSource.Tranquility, BuildCallbackUri(EsiBuildSettings.CallbackPort), EsiBuildSettings.EveClientId);
         var refreshed = await _sso.GetNewPKCEAccessAndRefreshTokenAsync(stored.RefreshToken).WaitAsync(cancellationToken);
         await ApplyTokenBundleAsync(refreshed, stored, cancellationToken).ConfigureAwait(false);
         _sessionStore.Save(stored);
@@ -71,13 +68,12 @@ public sealed class EveConnectionService
 
     public async Task LoginWithBrowserAsync(CancellationToken cancellationToken = default)
     {
-        var settings = _settingsStore.Load();
-        if (string.IsNullOrWhiteSpace(settings.EveClientId))
-            throw new InvalidOperationException("Set your EVE application Client ID in Settings.");
+        if (string.IsNullOrWhiteSpace(EsiBuildSettings.EveClientId))
+            throw new InvalidOperationException("Set EsiBuildSettings.EveClientId in source and rebuild.");
 
         InitializeApi();
-        var callbackUri = BuildCallbackUri(settings.CallbackPort);
-        _sso = new SSOv2(DataSource.Tranquility, callbackUri, settings.EveClientId);
+        var callbackUri = BuildCallbackUri(EsiBuildSettings.CallbackPort);
+        _sso = new SSOv2(DataSource.Tranquility, callbackUri, EsiBuildSettings.EveClientId);
 
         var state = CreateStateToken();
         var (verifier, challenge) = Pkce.CreateChallenge();
@@ -150,15 +146,14 @@ public sealed class EveConnectionService
         if (_access!.ExpiresUtc > DateTime.UtcNow.AddMinutes(2))
             return;
 
-        var settings = _settingsStore.Load();
-        if (string.IsNullOrWhiteSpace(settings.EveClientId))
+        if (string.IsNullOrWhiteSpace(EsiBuildSettings.EveClientId))
             return;
 
         var refresh = _authDto.AccessToken.RefreshToken;
         if (string.IsNullOrEmpty(refresh))
             return;
 
-        _sso = new SSOv2(DataSource.Tranquility, BuildCallbackUri(settings.CallbackPort), settings.EveClientId);
+        _sso = new SSOv2(DataSource.Tranquility, BuildCallbackUri(EsiBuildSettings.CallbackPort), EsiBuildSettings.EveClientId);
         var refreshed = await _sso.GetNewPKCEAccessAndRefreshTokenAsync(refresh).WaitAsync(cancellationToken);
         var stored = _sessionStore.Load() ?? new StoredSession
         {
