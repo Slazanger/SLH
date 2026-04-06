@@ -31,29 +31,64 @@
                     <ListBox.Styles>
                         <Style Selector="ListBoxItem">
                             <Setter Property="Padding" Value="1,0"/>
-                            <Setter Property="MinHeight" Value="20"/>
+                            <Setter Property="MinHeight" Value="22"/>
+                        </Style>
+                        <Style Selector="ListBoxItem:nth-child(odd) /template/ ContentPresenter">
+                            <Setter Property="Background" Value="#0a1016"/>
                         </Style>
                     </ListBox.Styles>
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:PilotRowViewModel">
                             <Border BorderThickness="2,0,0,0"
                                     BorderBrush="{Binding StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
-                                    Padding="1,0,0,0">
-                            <Grid ColumnDefinitions="20,*,Auto,Auto" Margin="0">
-                                <Border Grid.Column="0" Width="16" Height="16" CornerRadius="0" Background="#0a0e14" BorderBrush="#2d3d50" BorderThickness="1" VerticalAlignment="Center">
-                                    <TextBlock Text="♦" FontSize="8" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#5a7090"/>
-                                </Border>
-                                <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="3,0,4,0" VerticalAlignment="Center"
-                                           FontSize="10" LineHeight="12" TextTrimming="CharacterEllipsis"
-                                           Foreground="{Binding StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
-                                    <TextBlock Text="☠" Opacity="0.55" FontSize="8"/>
-                                    <TextBlock Text="{Binding ThreatScore}"
-                                               Foreground="{Binding ThreatForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
-                                               FontWeight="SemiBold" FontSize="9" MinWidth="14"/>
+                                    Padding="1,0,0,0"
+                                    ToolTip.Tip="{Binding RowTooltip}">
+                            <Grid ColumnDefinitions="18,*,Auto,Auto" Margin="0">
+                                <Panel Grid.Column="0" Width="16" Height="16" VerticalAlignment="Center">
+                                    <Border Width="16" Height="16" Background="#0a0e14" BorderBrush="#2d3d50" BorderThickness="1" ClipToBounds="True">
+                                        <Image Width="16" Height="16" Source="{Binding PortraitBitmap}" Stretch="UniformToFill"
+                                               IsVisible="{Binding PortraitBitmap, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}"/>
+                                    </Border>
+                                    <TextBlock Text="♦" FontSize="8" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#5a7090"
+                                               IsVisible="{Binding PortraitBitmap, Converter={x:Static avalconv:ObjectConverters.IsNull}}"/>
+                                </Panel>
+                                <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto" Margin="3,0,4,0" VerticalAlignment="Center">
+                                    <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"
+                                               FontSize="11" LineHeight="13" TextTrimming="CharacterEllipsis"
+                                               Opacity="{Binding ListNameOpacity}"
+                                               Foreground="{Binding StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding CorpTicker, StringFormat='[{0}]'}" VerticalAlignment="Center" Margin="4,0,0,0"
+                                               FontSize="9" Foreground="#8a9aaa" IsVisible="{Binding HasCorpTicker}"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding StandingDisplay}" VerticalAlignment="Center" Margin="4,0,0,0"
+                                               FontSize="9" Foreground="#7a8a9a" IsVisible="{Binding HasStandingDisplay}"/>
+                                </Grid>
+                                <Panel Grid.Column="2" Margin="0,0,2,0" VerticalAlignment="Center">
+                                    <Border Padding="4,2" BorderThickness="1" Background="#2a1f32" BorderBrush="#7B1FA2"
+                                            IsVisible="{Binding ShowThreatPendingPlaceholder}">
+                                        <TextBlock Text="????" FontWeight="SemiBold" FontSize="8" Foreground="#CE93D8"
+                                                   ToolTip.Tip="zKill threat not loaded yet"/>
+                                    </Border>
+                                    <Border Padding="3,1" BorderThickness="1"
+                                            Background="{Binding ThreatBadgeBackground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
+                                            BorderBrush="{Binding ThreatBadgeBorderBrush, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
+                                            IsVisible="{Binding ShowThreatBadgeValues}">
+                                        <StackPanel Orientation="Horizontal" Spacing="3">
+                                            <TextBlock Text="{Binding ThreatLabel}" FontWeight="SemiBold" FontSize="8"
+                                                       Foreground="{Binding ThreatForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
+                                            <TextBlock Text="{Binding ThreatScore}" FontWeight="SemiBold" FontSize="8" MinWidth="12"
+                                                       Foreground="{Binding ThreatForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Panel>
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="3" VerticalAlignment="Center" Margin="2,0,0,0">
+                                    <TextBlock Text="?" FontSize="9" Foreground="#9a8a70" VerticalAlignment="Center" FontWeight="SemiBold"
+                                               ToolTip.Tip="Resolving character…"
+                                               IsVisible="{Binding IsCharacterUnresolved}"/>
+                                    <TextBlock Text="cyno" FontSize="7" Foreground="#CE93D8" VerticalAlignment="Center" FontWeight="SemiBold"
+                                               IsVisible="{Binding HasZkillCynoHint}"/>
+                                    <TextBlock Text="✓" Foreground="#388E3C" FontSize="8" VerticalAlignment="Center"
+                                               IsVisible="{Binding IsFriendly}"/>
                                 </StackPanel>
-                                <TextBlock Grid.Column="3" Text="✓" Foreground="#388E3C" FontSize="8" VerticalAlignment="Center" Margin="2,0,0,0"
-                                           IsVisible="{Binding IsFriendly}"/>
                             </Grid>
                             </Border>
                         </DataTemplate>
@@ -76,16 +111,24 @@
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="{Binding SelectedPilot.Subtitle}" FontWeight="SemiBold" FontSize="11" TextWrapping="Wrap"
                                            Foreground="{Binding SelectedPilot.StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
-                                <Border Padding="4,2" Margin="0,3,0,0" HorizontalAlignment="Left" BorderThickness="1"
-                                        Background="{Binding SelectedPilot.ThreatBadgeBackground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
-                                        BorderBrush="{Binding SelectedPilot.ThreatBadgeBorderBrush, Converter={x:Static slh:HexColorToBrushConverter.Instance}}">
-                                    <TextBlock FontWeight="SemiBold" FontSize="10"
-                                               Foreground="{Binding SelectedPilot.ThreatForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}">
-                                        <Run Text="{Binding SelectedPilot.ThreatLabel}"/>
-                                        <Run Text=" "/>
-                                        <Run Text="{Binding SelectedPilot.ThreatScore}"/>
-                                    </TextBlock>
-                                </Border>
+                                <Panel Margin="0,3,0,0" HorizontalAlignment="Left">
+                                    <Border Padding="6,3" BorderThickness="1" Background="#2a1f32" BorderBrush="#7B1FA2"
+                                            IsVisible="{Binding SelectedPilot.ShowThreatPendingPlaceholder}">
+                                        <TextBlock Text="????" FontWeight="SemiBold" FontSize="10" Foreground="#CE93D8"
+                                                   ToolTip.Tip="zKill threat not loaded yet"/>
+                                    </Border>
+                                    <Border Padding="4,2" BorderThickness="1"
+                                            Background="{Binding SelectedPilot.ThreatBadgeBackground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
+                                            BorderBrush="{Binding SelectedPilot.ThreatBadgeBorderBrush, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
+                                            IsVisible="{Binding SelectedPilot.ShowThreatBadgeValues}">
+                                        <TextBlock FontWeight="SemiBold" FontSize="10"
+                                                   Foreground="{Binding SelectedPilot.ThreatForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}">
+                                            <Run Text="{Binding SelectedPilot.ThreatLabel}"/>
+                                            <Run Text=" "/>
+                                            <Run Text="{Binding SelectedPilot.ThreatScore}"/>
+                                        </TextBlock>
+                                    </Border>
+                                </Panel>
                             </StackPanel>
                         </StackPanel>
 

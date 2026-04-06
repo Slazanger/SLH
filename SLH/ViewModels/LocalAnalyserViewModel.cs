@@ -206,6 +206,8 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ClearLocal()
     {
+        foreach (var row in _rows.Values)
+            row.ReleaseResources();
         _rows.Clear();
         _pilotOrder.Clear();
         Pilots.Clear();
@@ -296,6 +298,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         if (_rows.ContainsKey(name))
             return;
         var row = new PilotRowViewModel { Name = name, Subtitle = name };
+        row.ShowThreatPendingPlaceholder = _settings.Load().EnableZkillIntel;
         _rows[name] = row;
         _pilotOrder.Add(name);
         if (!ShouldHidePilot(row))
@@ -306,6 +309,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
     {
         if (!_rows.TryGetValue(name, out var row))
             return;
+        row.ReleaseResources();
         _rows.Remove(name);
         _pilotOrder.Remove(name);
         Pilots.Remove(row);
@@ -477,7 +481,12 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
             {
                 ReapplyStandingsForAllPilotsWithIdsAndRebuild(corpByChar, allianceByChar);
                 if (!_settings.Load().EnableZkillIntel)
+                {
+                    foreach (var r in _rows.Values)
+                        r.ShowThreatPendingPlaceholder = false;
                     return (IReadOnlyList<PilotRowViewModel>)Array.Empty<PilotRowViewModel>();
+                }
+
                 return _rows.Values
                     .Where(r => r.CharacterId is > 0 && !ShouldHidePilot(r))
                     .ToList();
@@ -517,6 +526,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
 
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
+            row.ShowThreatPendingPlaceholder = false;
             row.ThreatScore = stats.ThreatScore;
             row.ShipsDestroyed = stats.ShipsDestroyed;
             row.ShipsLost = stats.ShipsLost;
@@ -550,6 +560,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
 
     private static void ClearZkillRowFields(PilotRowViewModel row)
     {
+        row.ShowThreatPendingPlaceholder = false;
         row.ThreatScore = 0;
         row.ShipsDestroyed = 0;
         row.ShipsLost = 0;

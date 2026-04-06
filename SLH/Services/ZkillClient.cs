@@ -184,10 +184,17 @@ public sealed class ZkillClient : IDisposable
     private static (int Score, string Label) ComputeThreat(int destroyed, int lost, int solo, long iskDestroyed)
     {
         var ratio = lost > 0 ? (double)destroyed / lost : destroyed;
-        var score = (int)Math.Clamp(
-            solo * 4 + destroyed / 3 + (int)(Math.Log10(iskDestroyed + 1) * 8) + (int)(ratio * 5),
-            0,
-            99);
+        // Damped components so “a few kills + ~1–2B ISK + poor ratio” stays single-digit (calibration ~5);
+        // stacked solo/destroyed/ratio still reaches the cap for heavy PvP records.
+        const double IskLogMul = 0.18;
+        const double SoloMul = 0.75;
+        const int DestroyDiv = 5;
+        const double RatioMul = 8;
+        var iskPoints = (int)(Math.Log10(iskDestroyed + 1) * IskLogMul);
+        var soloPoints = (int)(solo * SoloMul);
+        var destroyPoints = destroyed / DestroyDiv;
+        var ratioPoints = (int)(ratio * RatioMul);
+        var score = (int)Math.Clamp(soloPoints + destroyPoints + iskPoints + ratioPoints, 0, 99);
         var label = score >= 70 ? "HIGH" : score >= 40 ? "MED" : "LOW";
         return (score, label);
     }
