@@ -12,6 +12,9 @@ public partial class PilotRowViewModel : ObservableObject
     [ObservableProperty] private string _portraitUrl = "";
     [ObservableProperty] private int _threatScore;
     [ObservableProperty] private string _threatLabel = "LOW";
+    [ObservableProperty] private string _threatForeground = ThreatTierColors.ForegroundForScore(0);
+    [ObservableProperty] private string _threatBadgeBackground = ThreatTierColors.BadgeBackgroundForScore(0);
+    [ObservableProperty] private string _threatBadgeBorderBrush = ThreatTierColors.BadgeBorderForScore(0);
     [ObservableProperty] private int _shipsDestroyed;
     [ObservableProperty] private int _shipsLost;
     [ObservableProperty] private int _zkillSoloKills;
@@ -50,7 +53,10 @@ public partial class PilotRowViewModel : ObservableObject
 
     partial void OnThreatScoreChanged(int value)
     {
-        ThreatLabel = value >= 70 ? "HIGH" : value >= 40 ? "MED" : "LOW";
+        ThreatLabel = value >= ThreatTierColors.HighMin ? "HIGH" : value >= ThreatTierColors.MediumMin ? "MED" : "LOW";
+        ThreatForeground = ThreatTierColors.ForegroundForScore(value);
+        ThreatBadgeBackground = ThreatTierColors.BadgeBackgroundForScore(value);
+        ThreatBadgeBorderBrush = ThreatTierColors.BadgeBorderForScore(value);
     }
 
     public bool HasZkillDetail => !string.IsNullOrWhiteSpace(ZkillRatiosLine);

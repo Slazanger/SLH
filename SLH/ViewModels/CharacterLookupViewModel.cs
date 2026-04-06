@@ -34,6 +34,7 @@ public partial class CharacterLookupViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _zkillCynoHint = "";
     [ObservableProperty] private int _threatScore;
     [ObservableProperty] private string _threatLabel = "";
+    [ObservableProperty] private string _threatForeground = "#8a9aaa";
     [ObservableProperty] private int[] _activityBuckets = new int[24];
     [ObservableProperty] private int[] _activityHourCounts = new int[24];
     [ObservableProperty] private string _activityHeatmapUtcLine = "";
@@ -49,6 +50,17 @@ public partial class CharacterLookupViewModel : ObservableObject, IDisposable
     partial void OnZkillRatiosLineChanged(string value) => OnPropertyChanged(nameof(HasZkillDetail));
 
     partial void OnZkillCynoHintChanged(string value) => OnPropertyChanged(nameof(HasZkillCynoHint));
+
+    partial void OnThreatScoreChanged(int value) => RefreshThreatForeground();
+
+    partial void OnThreatLabelChanged(string value) => RefreshThreatForeground();
+
+    private void RefreshThreatForeground()
+    {
+        ThreatForeground = string.IsNullOrWhiteSpace(ThreatLabel) && ThreatScore == 0
+            ? "#8a9aaa"
+            : ThreatTierColors.ForegroundForScore(ThreatScore);
+    }
 
     public CharacterLookupViewModel(EveConnectionService eve, ZkillClient zkill, ISettingsStore settings,
         EnrichmentDiskCache diskCache)

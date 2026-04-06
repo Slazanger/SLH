@@ -25,9 +25,15 @@
                     <TextBlock Grid.Column="1" Grid.Row="1" Margin="0,2,0,0" FontSize="10">
                         <Run Text="Corp " Foreground="#8a9aaa"/><Run Text="{Binding CorpName}"/> <Run Text="["/><Run Text="{Binding CorpTicker}"/><Run Text="]"/>
                     </TextBlock>
-                    <TextBlock Grid.Column="1" Grid.Row="2" Margin="0,4,0,0" FontSize="10">
-                        <Run Text="Threat " Foreground="#8a9aaa"/><Run Text="{Binding ThreatLabel}"/><Run Text=" ("/><Run Text="{Binding ThreatScore}"/><Run Text=")"/>
-                    </TextBlock>
+                    <StackPanel Grid.Column="1" Grid.Row="2" Orientation="Horizontal" Spacing="0" Margin="0,4,0,0">
+                        <TextBlock Text="Threat " FontSize="10" Foreground="#8a9aaa" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ThreatLabel}" FontSize="10" VerticalAlignment="Center"
+                                   Foreground="{Binding ThreatForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
+                        <TextBlock Text=" (" FontSize="10" Foreground="#8a9aaa" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ThreatScore}" FontSize="10" VerticalAlignment="Center"
+                                   Foreground="{Binding ThreatForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
+                        <TextBlock Text=")" FontSize="10" Foreground="#8a9aaa" VerticalAlignment="Center"/>
+                    </StackPanel>
                     <TextBlock Grid.Column="1" Grid.Row="3" Margin="0,2,0,0" FontSize="10">
                         <Run Text="K/L " Foreground="#8a9aaa"/><Run Text="{Binding ShipsDestroyed}"/><Run Text="/"/><Run Text="{Binding ShipsLost}"/>
                     </TextBlock>
