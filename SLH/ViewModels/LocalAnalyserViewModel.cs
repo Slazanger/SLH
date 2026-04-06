@@ -29,8 +29,6 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
     public ObservableCollection<PilotRowViewModel> Pilots { get; } = new();
 
     [ObservableProperty] private PilotRowViewModel? _selectedPilot;
-    [ObservableProperty] private string _pasteText = "";
-    [ObservableProperty] private bool _localThreatsExpanded = true;
     [ObservableProperty] private string _detailNotes = "";
 
     public LocalAnalyserViewModel(
@@ -63,10 +61,10 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         _watcher.WatchFolder(s.ChatLogsFolder, string.IsNullOrWhiteSpace(filter) ? null : filter);
     }
 
-    [RelayCommand]
-    private void ApplyPaste()
+    /// <summary>Parses pasted local text (names or log lines) and merges into the list, same as the former Apply action.</summary>
+    public void ApplyLocalText(string? text)
     {
-        foreach (var name in LocalChatParser.ParseNameList(PasteText))
+        foreach (var name in LocalChatParser.ParseNameList(text ?? ""))
             AddOrKeepPilot(name);
         ScheduleEnrich();
         UpdateHeaderCount();

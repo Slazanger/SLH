@@ -7,21 +7,18 @@
              x:Class="SLH.Views.LocalAnalyserView"
              x:DataType="vm:LocalAnalyserViewModel">
 
-    <Grid ColumnDefinitions="*,248" Margin="0,2,0,0">
-        <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="0,0,6,0">
-            <Expander Grid.Row="0" IsExpanded="{Binding LocalThreatsExpanded, Mode=TwoWay}" Header="Local" Margin="0,0,0,4">
-                <StackPanel Spacing="4" Margin="0,4,0,0">
-                    <TextBlock Text="Paste local (names or log lines)" Opacity="0.65" FontSize="10"/>
-                    <TextBox Text="{Binding PasteText}" AcceptsReturn="True" Height="52" TextWrapping="Wrap"/>
-                    <StackPanel Orientation="Horizontal" Spacing="4">
-                        <Button Content="Apply" Command="{Binding ApplyPasteCommand}"/>
-                        <Button Content="Clear" Command="{Binding ClearLocalCommand}"/>
-                    </StackPanel>
-                </StackPanel>
-            </Expander>
+    <UserControl.Resources>
+        <ContextMenu x:Key="LocalPilotsContextMenu">
+            <MenuItem Header="Paste" Click="OnPasteLocalClick"/>
+            <MenuItem Header="Clear" Click="OnClearLocalClick"/>
+        </ContextMenu>
+    </UserControl.Resources>
 
-            <Border Grid.Row="1" Classes="glass" Padding="4">
-                <ListBox ItemsSource="{Binding Pilots}" SelectedItem="{Binding SelectedPilot}" Background="Transparent">
+    <Grid ColumnDefinitions="*,248" Margin="0,2,0,0">
+        <Grid Grid.Column="0" RowDefinitions="*" Margin="0,0,6,0">
+            <Border x:Name="LocalPilotsHost" Classes="glass" Padding="4" ToolTip.Tip="Right-click for Paste or Clear">
+                <ListBox ItemsSource="{Binding Pilots}" SelectedItem="{Binding SelectedPilot}"
+                         Background="#0d1118" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:PilotRowViewModel">
                             <Border BorderThickness="3,0,0,0"
