@@ -35,10 +35,15 @@ public partial class MainWindow : Window
         if (Clipboard is null)
             return;
         var text = await Clipboard.TryGetTextAsync();
+        if (IsCtrlVPasteGesture(e))
+            vm.Local.ClearLocalCommand.Execute(null);
         vm.Local.ApplyLocalText(text);
     }
 
     private static bool IsLocalPasteGesture(KeyEventArgs e) =>
         e.Key is Key.P or Key.V
         || e.PhysicalKey is PhysicalKey.P or PhysicalKey.V;
+
+    private static bool IsCtrlVPasteGesture(KeyEventArgs e) =>
+        e.Key is Key.V || e.PhysicalKey is PhysicalKey.V;
 }

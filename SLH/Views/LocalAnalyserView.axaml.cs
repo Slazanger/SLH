@@ -43,12 +43,16 @@ public partial class LocalAnalyserView : UserControl
             return;
 
         e.Handled = true;
-        _ = PasteLocalFromClipboardAsync();
+        var clearFirst = IsCtrlVPasteGesture(e);
+        _ = PasteLocalFromClipboardAsync(clearFirst);
     }
 
     private static bool IsPasteLocalGesture(KeyEventArgs e) =>
         e.Key is Key.P or Key.V
         || e.PhysicalKey is PhysicalKey.P or PhysicalKey.V;
+
+    private static bool IsCtrlVPasteGesture(KeyEventArgs e) =>
+        e.Key is Key.V || e.PhysicalKey is PhysicalKey.V;
 
     /// <summary>True when this view is the tab control's selected content (tab content lives in a presenter, not under TabItem visually).</summary>
     private bool IsThisLocalTabSelectedContent()
@@ -62,11 +66,13 @@ public partial class LocalAnalyserView : UserControl
         return true;
     }
 
-    private async Task PasteLocalFromClipboardAsync()
+    private async Task PasteLocalFromClipboardAsync(bool clearBeforePaste = false)
     {
         if (TopLevel.GetTopLevel(this) is not { } top || top.Clipboard is null || DataContext is not LocalAnalyserViewModel vm)
             return;
         var text = await top.Clipboard.TryGetTextAsync();
+        if (clearBeforePaste)
+            vm.ClearLocalCommand.Execute(null);
         vm.ApplyLocalText(text);
     }
 
@@ -85,6 +91,7 @@ public partial class LocalAnalyserView : UserControl
         if (top?.Clipboard is null || DataContext is not LocalAnalyserViewModel vm)
             return;
         var text = await top.Clipboard.TryGetTextAsync();
+        vm.ClearLocalCommand.Execute(null);
         vm.ApplyLocalText(text);
     }
 
