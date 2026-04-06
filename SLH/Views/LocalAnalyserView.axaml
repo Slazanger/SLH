@@ -4,6 +4,7 @@
              xmlns:conv="using:Avalonia.Data.Converters"
              xmlns:hexconv="using:SLH.Converters"
              xmlns:vm="using:SLH.ViewModels"
+             xmlns:services="using:SLH.Services"
              x:Class="SLH.Views.LocalAnalyserView"
              x:DataType="vm:LocalAnalyserViewModel">
 
@@ -75,6 +76,18 @@
                             <Run Text="  Losses " Foreground="#8a9aaa"/><Run Text="{Binding SelectedPilot.ShipsLost}"/>
                         </TextBlock>
                         <TextBlock Text="{Binding SelectedPilot.ShipsHint}" TextWrapping="Wrap" Opacity="0.8" FontSize="10"/>
+                        <StackPanel Spacing="2" IsVisible="{Binding SelectedPilot.HasZkillDetail}">
+                            <TextBlock Text="zKill (characterID stats)" FontWeight="SemiBold" FontSize="10" Foreground="#00a8b8"/>
+                            <TextBlock Text="{Binding SelectedPilot.ZkillRatiosLine}" TextWrapping="Wrap" Opacity="0.9" FontSize="10"/>
+                            <TextBlock TextWrapping="Wrap" FontSize="10" Opacity="0.85">
+                                <Run Text="Solo kills " Foreground="#8a9aaa"/><Run Text="{Binding SelectedPilot.ZkillSoloKills}"/>
+                                <Run Text="  Solo losses " Foreground="#8a9aaa"/><Run Text="{Binding SelectedPilot.ZkillSoloLosses}"/>
+                            </TextBlock>
+                            <TextBlock Text="{Binding SelectedPilot.ZkillPvpSummary}" TextWrapping="Wrap" FontSize="10" Opacity="0.9"/>
+                            <TextBlock Text="{Binding SelectedPilot.ZkillCynoHint}" TextWrapping="Wrap" FontSize="10" Foreground="#CE93D8" Opacity="0.95"
+                                       IsVisible="{Binding SelectedPilot.HasZkillCynoHint}"/>
+                            <TextBlock Text="{x:Static services:ZkillIntelHeuristics.Disclaimer}" TextWrapping="Wrap" FontSize="9" Opacity="0.55" FontStyle="Italic"/>
+                        </StackPanel>
                         <TextBlock Text="{Binding SelectedPilot.ActivityRegion}" FontWeight="SemiBold" FontSize="10" Foreground="#00a8b8"/>
                         <TextBlock Text="Activity (UTC, zKill)" Opacity="0.5" FontSize="9"/>
                         <ItemsControl ItemsSource="{Binding SelectedPilot.ActivityBuckets}">

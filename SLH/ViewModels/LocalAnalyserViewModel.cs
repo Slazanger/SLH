@@ -285,7 +285,12 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
 
         var stats = await _zkill.GetCharacterStatsAsync(id, cancellationToken).ConfigureAwait(false);
         if (stats == null)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => ClearZkillRowFields(row));
             return;
+        }
+
+        var cyno = ZkillIntelHeuristics.BuildCynoHint(stats);
 
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
@@ -301,7 +306,31 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                 : "TIP: Review loss patterns on zKill for ship preferences.";
             row.ActivityBuckets = stats.ActivityBuckets.ToArray();
             row.ShipsHint = $"Ships destroyed / lost: {stats.ShipsDestroyed} / {stats.ShipsLost} (zKill)";
+            row.ZkillSoloKills = stats.SoloKills;
+            row.ZkillSoloLosses = stats.SoloLosses;
+            row.ZkillRatiosLine = ZkillIntelHeuristics.BuildRatiosLine(stats);
+            row.ZkillPvpSummary = ZkillIntelHeuristics.BuildPvpSummary(stats);
+            row.ZkillCynoHint = cyno ?? "";
         });
+    }
+
+    private static void ClearZkillRowFields(PilotRowViewModel row)
+    {
+        row.ThreatScore = 0;
+        row.ShipsDestroyed = 0;
+        row.ShipsLost = 0;
+        row.IskDestroyed = 0;
+        row.IskLost = 0;
+        row.IsFriendly = false;
+        row.ActivityRegion = "";
+        row.IntelTip = "";
+        row.ActivityBuckets = new int[24];
+        row.ShipsHint = "";
+        row.ZkillSoloKills = 0;
+        row.ZkillSoloLosses = 0;
+        row.ZkillRatiosLine = "";
+        row.ZkillPvpSummary = "";
+        row.ZkillCynoHint = "";
     }
 
     private void UpdateHeaderCount()
@@ -321,13 +350,9 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
             return;
         }
 
-        DetailNotes = string.Join(Environment.NewLine, new[]
-        {
-            string.IsNullOrEmpty(value.StandingDisplay) ? null : $"Standing (contacts): {value.StandingDisplay}",
-            $"Recent kills: {value.ShipsDestroyed} — Recent losses: {value.ShipsLost}",
-            value.ShipsHint,
-            value.IntelTip
-        }.Where(x => !string.IsNullOrWhiteSpace(x)));
+        DetailNotes = string.IsNullOrWhiteSpace(value.StandingDisplay)
+            ? ""
+            : $"Standing (contacts): {value.StandingDisplay}";
     }
 
     public void Dispose()

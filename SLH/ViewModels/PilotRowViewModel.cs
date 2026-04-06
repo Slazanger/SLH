@@ -14,6 +14,11 @@ public partial class PilotRowViewModel : ObservableObject
     [ObservableProperty] private string _threatLabel = "LOW";
     [ObservableProperty] private int _shipsDestroyed;
     [ObservableProperty] private int _shipsLost;
+    [ObservableProperty] private int _zkillSoloKills;
+    [ObservableProperty] private int _zkillSoloLosses;
+    [ObservableProperty] private string _zkillRatiosLine = "";
+    [ObservableProperty] private string _zkillPvpSummary = "";
+    [ObservableProperty] private string _zkillCynoHint = "";
     [ObservableProperty] private long _iskDestroyed;
     [ObservableProperty] private long _iskLost;
     [ObservableProperty] private string _shipsHint = "";
@@ -40,4 +45,12 @@ public partial class PilotRowViewModel : ObservableObject
     {
         ThreatLabel = value >= 70 ? "HIGH" : value >= 40 ? "MED" : "LOW";
     }
+
+    public bool HasZkillDetail => !string.IsNullOrWhiteSpace(ZkillRatiosLine);
+
+    public bool HasZkillCynoHint => !string.IsNullOrWhiteSpace(ZkillCynoHint);
+
+    partial void OnZkillRatiosLineChanged(string value) => OnPropertyChanged(nameof(HasZkillDetail));
+
+    partial void OnZkillCynoHintChanged(string value) => OnPropertyChanged(nameof(HasZkillCynoHint));
 }

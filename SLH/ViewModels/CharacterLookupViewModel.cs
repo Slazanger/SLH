@@ -22,6 +22,11 @@ public partial class CharacterLookupViewModel : ObservableObject
     [ObservableProperty] private string _portraitUrl = "";
     [ObservableProperty] private int _shipsDestroyed;
     [ObservableProperty] private int _shipsLost;
+    [ObservableProperty] private int _zkillSoloKills;
+    [ObservableProperty] private int _zkillSoloLosses;
+    [ObservableProperty] private string _zkillRatiosLine = "";
+    [ObservableProperty] private string _zkillPvpSummary = "";
+    [ObservableProperty] private string _zkillCynoHint = "";
     [ObservableProperty] private int _threatScore;
     [ObservableProperty] private string _threatLabel = "";
     [ObservableProperty] private int[] _activityBuckets = new int[24];
@@ -29,6 +34,14 @@ public partial class CharacterLookupViewModel : ObservableObject
 
     public bool ShowStatus => !string.IsNullOrWhiteSpace(Status);
     public bool HasResult => CharacterId is > 0;
+
+    public bool HasZkillDetail => !string.IsNullOrWhiteSpace(ZkillRatiosLine);
+
+    public bool HasZkillCynoHint => !string.IsNullOrWhiteSpace(ZkillCynoHint);
+
+    partial void OnZkillRatiosLineChanged(string value) => OnPropertyChanged(nameof(HasZkillDetail));
+
+    partial void OnZkillCynoHintChanged(string value) => OnPropertyChanged(nameof(HasZkillCynoHint));
 
     public CharacterLookupViewModel(EveConnectionService eve, ZkillClient zkill, ISettingsStore settings)
     {
@@ -60,6 +73,13 @@ public partial class CharacterLookupViewModel : ObservableObject
             PortraitUrl = "";
             ThreatScore = 0;
             ThreatLabel = "";
+            ShipsDestroyed = 0;
+            ShipsLost = 0;
+            ZkillSoloKills = 0;
+            ZkillSoloLosses = 0;
+            ZkillRatiosLine = "";
+            ZkillPvpSummary = "";
+            ZkillCynoHint = "";
             ActivityBuckets = new int[24];
             PortraitBitmap?.Dispose();
             PortraitBitmap = null;
@@ -90,6 +110,11 @@ public partial class CharacterLookupViewModel : ObservableObject
             var threatScore = 0;
             var threatLabel = "";
             var buckets = new int[24];
+            var zkillSoloKills = 0;
+            var zkillSoloLosses = 0;
+            var zkillRatiosLine = "";
+            var zkillPvpSummary = "";
+            var zkillCynoHint = "";
             if (_settings.Load().EnableZkillIntel)
             {
                 var stats = await _zkill.GetCharacterStatsAsync(match.Id, cancellationToken).ConfigureAwait(false);
@@ -100,6 +125,11 @@ public partial class CharacterLookupViewModel : ObservableObject
                     threatScore = stats.ThreatScore;
                     threatLabel = stats.ThreatLabel;
                     buckets = stats.ActivityBuckets.ToArray();
+                    zkillSoloKills = stats.SoloKills;
+                    zkillSoloLosses = stats.SoloLosses;
+                    zkillRatiosLine = ZkillIntelHeuristics.BuildRatiosLine(stats);
+                    zkillPvpSummary = ZkillIntelHeuristics.BuildPvpSummary(stats);
+                    zkillCynoHint = ZkillIntelHeuristics.BuildCynoHint(stats) ?? "";
                 }
             }
 
@@ -130,6 +160,11 @@ public partial class CharacterLookupViewModel : ObservableObject
                 CorpTicker = corpTicker;
                 ShipsDestroyed = shipsDestroyed;
                 ShipsLost = shipsLost;
+                ZkillSoloKills = zkillSoloKills;
+                ZkillSoloLosses = zkillSoloLosses;
+                ZkillRatiosLine = zkillRatiosLine;
+                ZkillPvpSummary = zkillPvpSummary;
+                ZkillCynoHint = zkillCynoHint;
                 ThreatScore = threatScore;
                 ThreatLabel = threatLabel;
                 ActivityBuckets = buckets;

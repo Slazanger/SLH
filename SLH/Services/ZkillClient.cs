@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -12,6 +13,15 @@ public sealed class ZkillStats
     public long IskDestroyed { get; init; }
     public long IskLost { get; init; }
     public int SoloKills { get; init; }
+    public int SoloLosses { get; init; }
+    public double DangerRatio { get; init; }
+    public double GangRatio { get; init; }
+    public double SoloRatio { get; init; }
+    public double AvgGangSize { get; init; }
+    /// <summary>SDE group ID → ships lost in that group (zKill stats <c>groups</c>).</summary>
+    public IReadOnlyDictionary<int, int> GroupShipsLost { get; init; } =
+        FrozenDictionary<int, int>.Empty;
+
     public int ThreatScore { get; init; }
     public string ThreatLabel { get; init; } = "LOW";
     public IReadOnlyList<int> ActivityBuckets { get; init; } = Array.Empty<int>();
@@ -48,7 +58,7 @@ public sealed class ZkillClient : IDisposable
         await _requestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var url = $"https://zkillboard.com/api/stats/character/{characterId}/";
+            var url = $"https://zkillboard.com/api/stats/characterID/{characterId}/";
 
             for (var attempt = 0; attempt < _max429Attempts; attempt++)
             {
@@ -86,11 +96,18 @@ public sealed class ZkillClient : IDisposable
                     var shipsDestroyed = ReadInt(root, "shipsDestroyed");
                     var shipsLost = ReadInt(root, "shipsLost");
                     var soloKills = ReadInt(root, "soloKills");
+                    var soloLosses = ReadInt(root, "soloLosses");
+                    var dangerRatio = ReadDouble(root, "dangerRatio");
+                    var gangRatio = ReadDouble(root, "gangRatio");
+                    var soloRatio = ReadDouble(root, "soloRatio");
+                    var avgGangSize = ReadDouble(root, "avgGangSize");
                     long iskDestroyed = 0, iskLost = 0;
                     if (root.TryGetProperty("iskDestroyed", out var idEl))
                         iskDestroyed = ReadLong(idEl);
                     if (root.TryGetProperty("iskLost", out var ilEl))
                         iskLost = ReadLong(ilEl);
+
+                    var groupLosses = ParseGroupShipsLost(root);
 
                     var threat = ComputeThreat(shipsDestroyed, shipsLost, soloKills, iskDestroyed);
                     var buckets = BuildActivityBuckets(root, characterId, shipsDestroyed);
@@ -103,6 +120,14 @@ public sealed class ZkillClient : IDisposable
                         IskDestroyed = iskDestroyed,
                         IskLost = iskLost,
                         SoloKills = soloKills,
+                        SoloLosses = soloLosses,
+                        DangerRatio = dangerRatio,
+                        GangRatio = gangRatio,
+                        SoloRatio = soloRatio,
+                        AvgGangSize = avgGangSize,
+                        GroupShipsLost = groupLosses.Count > 0
+                            ? groupLosses.ToFrozenDictionary()
+                            : FrozenDictionary<int, int>.Empty,
                         ThreatScore = threat.Score,
                         ThreatLabel = threat.Label,
                         ActivityBuckets = buckets
@@ -171,6 +196,45 @@ public sealed class ZkillClient : IDisposable
         }
 
         return buckets;
+    }
+
+    private static Dictionary<int, int> ParseGroupShipsLost(JsonElement root)
+    {
+        var map = new Dictionary<int, int>();
+        if (!root.TryGetProperty("groups", out var groups) || groups.ValueKind != JsonValueKind.Object)
+            return map;
+
+        foreach (var p in groups.EnumerateObject())
+        {
+            if (p.Value.ValueKind != JsonValueKind.Object)
+                continue;
+            var gid = ReadInt(p.Value, "groupID");
+            if (gid <= 0 && int.TryParse(p.Name, out var fromKey))
+                gid = fromKey;
+            if (gid <= 0)
+                continue;
+            var lost = ReadInt(p.Value, "shipsLost");
+            if (lost > 0)
+                map[gid] = lost;
+        }
+
+        return map;
+    }
+
+    private static double ReadDouble(JsonElement root, string name) =>
+        root.TryGetProperty(name, out var el) ? ReadDouble(el) : 0;
+
+    private static double ReadDouble(JsonElement el)
+    {
+        return el.ValueKind switch
+        {
+            JsonValueKind.Number => el.TryGetDouble(out var d) ? d : 0,
+            JsonValueKind.String => double.TryParse(el.GetString(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var j)
+                ? j
+                : 0,
+            _ => 0
+        };
     }
 
     private static int ReadInt(JsonElement root, string name) =>
