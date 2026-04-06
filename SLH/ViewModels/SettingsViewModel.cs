@@ -11,8 +11,11 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ISettingsStore _settingsStore;
     private readonly EveConnectionService _eve;
     private readonly EnrichmentDiskCache _enrichmentCache;
-    private readonly Action _onSaved;
+    /// <summary>Arg: reload this view model from disk (use after login/logout); false when we already have the latest edits.</summary>
+    private readonly Action<bool> _onSettingsApplied;
     private readonly Action<string>? _onLoginFailed;
+    private bool _suppressPersist;
+    private readonly DispatcherTimer _folderPersistDebounce;
 
     [ObservableProperty] private string _chatLogsFolder = "";
     [ObservableProperty] private bool _enableZkillIntel = true;
@@ -22,27 +25,43 @@ public partial class SettingsViewModel : ObservableObject
         ISettingsStore settingsStore,
         EveConnectionService eve,
         EnrichmentDiskCache enrichmentCache,
-        Action onSaved,
+        Action<bool> onSettingsApplied,
         Action<string>? onLoginFailed = null)
     {
         _settingsStore = settingsStore;
         _eve = eve;
         _enrichmentCache = enrichmentCache;
-        _onSaved = onSaved;
+        _onSettingsApplied = onSettingsApplied;
         _onLoginFailed = onLoginFailed;
+
+        _folderPersistDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
+        _folderPersistDebounce.Tick += (_, _) =>
+        {
+            _folderPersistDebounce.Stop();
+            if (!_suppressPersist)
+                PersistToDisk(reloadSettingsView: false);
+        };
+
         Reload();
     }
 
     public void Reload()
     {
-        var s = _settingsStore.Load();
-        ChatLogsFolder = s.ChatLogsFolder;
-        EnableZkillIntel = s.EnableZkillIntel;
-        FilterOutStandingPlus5Or10 = s.FilterOutStandingPlus5Or10 is not false;
+        _suppressPersist = true;
+        try
+        {
+            var s = _settingsStore.Load();
+            ChatLogsFolder = s.ChatLogsFolder;
+            EnableZkillIntel = s.EnableZkillIntel;
+            FilterOutStandingPlus5Or10 = s.FilterOutStandingPlus5Or10 is not false;
+        }
+        finally
+        {
+            _suppressPersist = false;
+        }
     }
 
-    [RelayCommand]
-    private void Save()
+    private void PersistToDisk(bool reloadSettingsView)
     {
         _settingsStore.Save(new AppSettings
         {
@@ -50,14 +69,36 @@ public partial class SettingsViewModel : ObservableObject
             EnableZkillIntel = EnableZkillIntel,
             FilterOutStandingPlus5Or10 = FilterOutStandingPlus5Or10
         });
-        _onSaved();
+        _onSettingsApplied(reloadSettingsView);
+    }
+
+    partial void OnChatLogsFolderChanged(string value)
+    {
+        if (_suppressPersist)
+            return;
+        _folderPersistDebounce.Stop();
+        _folderPersistDebounce.Start();
+    }
+
+    partial void OnEnableZkillIntelChanged(bool value)
+    {
+        if (_suppressPersist)
+            return;
+        PersistToDisk(reloadSettingsView: false);
+    }
+
+    partial void OnFilterOutStandingPlus5Or10Changed(bool value)
+    {
+        if (_suppressPersist)
+            return;
+        PersistToDisk(reloadSettingsView: false);
     }
 
     [RelayCommand]
     private void Logout()
     {
         _eve.Logout();
-        _onSaved();
+        _onSettingsApplied(true);
     }
 
     [RelayCommand]
@@ -66,7 +107,7 @@ public partial class SettingsViewModel : ObservableObject
         try
         {
             await _eve.LoginWithBrowserAsync(cancellationToken).ConfigureAwait(false);
-            await Dispatcher.UIThread.InvokeAsync(_onSaved);
+            await Dispatcher.UIThread.InvokeAsync(() => _onSettingsApplied(true));
         }
         catch (Exception ex)
         {
@@ -79,5 +120,4 @@ public partial class SettingsViewModel : ObservableObject
     {
         _enrichmentCache.ClearAll();
     }
-
 }

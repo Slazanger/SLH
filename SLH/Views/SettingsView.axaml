@@ -31,7 +31,7 @@
                         HorizontalAlignment="Left"/>
             </StackPanel>
 
-            <Button Content="Save" Command="{Binding SaveCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+            <TextBlock Text="Settings save automatically when you change them." Opacity="0.55" FontSize="9" Margin="0,6,0,0"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

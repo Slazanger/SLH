@@ -41,7 +41,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         Local = new LocalAnalyserViewModel(eve, contactStandings, settings, header, zkill, enrichmentCache, logWatcher);
         Dscan = new DscanViewModel();
         Lookup = new CharacterLookupViewModel(eve, zkill, settings, enrichmentCache);
-        Settings = new SettingsViewModel(settings, eve, enrichmentCache, OnSettingsSaved,
+        Settings = new SettingsViewModel(settings, eve, enrichmentCache, OnSettingsApplied,
             msg => Header.SystemLine = $"Login failed: {msg}");
 
         _locationTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(45) };
@@ -72,7 +72,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         });
     }
 
-    private void OnSettingsSaved()
+    /// <param name="reloadSettingsView">Reload settings fields from disk (login/logout); false after auto-save so the chat folder text box is not reset mid-edit.</param>
+    private void OnSettingsApplied(bool reloadSettingsView)
     {
         Header.CharacterDisplayName = _eve.CharacterName;
         Header.PortraitUrl = _eve.PortraitUrl;
@@ -82,7 +83,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             Local.ClearPilotStandingVisuals();
         else
             Local.RebuildVisiblePilotsList();
-        Settings.Reload();
+        if (reloadSettingsView)
+            Settings.Reload();
         _ = RefreshLocationAsync();
     }
 
