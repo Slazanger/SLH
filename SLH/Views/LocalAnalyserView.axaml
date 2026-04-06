@@ -136,8 +136,16 @@
                                 </Panel>
                             </Border>
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{Binding SelectedPilot.Subtitle}" FontWeight="SemiBold" FontSize="11" TextWrapping="Wrap"
+                                <TextBlock Text="{Binding SelectedPilot.Name}" FontWeight="SemiBold" FontSize="11" TextWrapping="Wrap"
                                            Foreground="{Binding SelectedPilot.StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
+                                <StackPanel Margin="0,3,0,0" Spacing="1" IsVisible="{Binding SelectedPilot.HasCorpDetail}">
+                                    <TextBlock Text="Corporation" FontSize="9" Opacity="0.55"/>
+                                    <TextBlock Text="{Binding SelectedPilot.CorpDetailLine}" FontSize="10" TextWrapping="Wrap" Foreground="#8a9aaa"/>
+                                </StackPanel>
+                                <StackPanel Margin="0,2,0,0" Spacing="1" IsVisible="{Binding SelectedPilot.HasAllianceDetail}">
+                                    <TextBlock Text="Alliance" FontSize="9" Opacity="0.55"/>
+                                    <TextBlock Text="{Binding SelectedPilot.AllianceDetailLine}" FontSize="10" TextWrapping="Wrap" Foreground="#8a9aaa"/>
+                                </StackPanel>
                                 <Panel Margin="0,3,0,0" HorizontalAlignment="Left">
                                     <Border Padding="6,3" BorderThickness="1" Background="#2a1f32" BorderBrush="#7B1FA2"
                                             IsVisible="{Binding SelectedPilot.ShowThreatPendingPlaceholder}">

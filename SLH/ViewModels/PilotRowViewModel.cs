@@ -13,7 +13,11 @@ public partial class PilotRowViewModel : ObservableObject
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private long? _characterId;
     [ObservableProperty] private string _corpTicker = "";
+    [ObservableProperty] private string _corpName = "";
     [ObservableProperty] private string _allianceTicker = "";
+    [ObservableProperty] private string _allianceName = "";
+    [ObservableProperty] private string _corpDetailLine = "";
+    [ObservableProperty] private string _allianceDetailLine = "";
     [ObservableProperty] private string _subtitle = "";
     [ObservableProperty] private string _portraitUrl = "";
     [ObservableProperty] private Bitmap? _portraitBitmap;
@@ -58,6 +62,10 @@ public partial class PilotRowViewModel : ObservableObject
 
     public bool HasAllianceTicker => !string.IsNullOrWhiteSpace(AllianceTicker);
 
+    public bool HasCorpDetail => !string.IsNullOrWhiteSpace(CorpDetailLine);
+
+    public bool HasAllianceDetail => !string.IsNullOrWhiteSpace(AllianceDetailLine);
+
     public bool HasStandingDisplay => !string.IsNullOrWhiteSpace(StandingDisplay);
 
     public double ListNameOpacity => CharacterId is > 0 ? 1.0 : 0.55;
@@ -94,13 +102,48 @@ public partial class PilotRowViewModel : ObservableObject
     partial void OnCorpTickerChanged(string value)
     {
         OnPropertyChanged(nameof(HasCorpTicker));
+        RefreshOrgDetailLines();
+        RefreshRowTooltip();
+    }
+
+    partial void OnCorpNameChanged(string value)
+    {
+        RefreshOrgDetailLines();
         RefreshRowTooltip();
     }
 
     partial void OnAllianceTickerChanged(string value)
     {
         OnPropertyChanged(nameof(HasAllianceTicker));
+        RefreshOrgDetailLines();
         RefreshRowTooltip();
+    }
+
+    partial void OnAllianceNameChanged(string value)
+    {
+        RefreshOrgDetailLines();
+        RefreshRowTooltip();
+    }
+
+    partial void OnCorpDetailLineChanged(string value) => OnPropertyChanged(nameof(HasCorpDetail));
+
+    partial void OnAllianceDetailLineChanged(string value) => OnPropertyChanged(nameof(HasAllianceDetail));
+
+    private void RefreshOrgDetailLines()
+    {
+        CorpDetailLine = BuildOrgDetailLine(CorpName, CorpTicker);
+        AllianceDetailLine = BuildOrgDetailLine(AllianceName, AllianceTicker);
+    }
+
+    private static string BuildOrgDetailLine(string fullName, string ticker)
+    {
+        var t = ticker.Trim();
+        var n = fullName.Trim();
+        if (n.Length > 0 && t.Length > 0)
+            return $"{n} [{t}]";
+        if (t.Length > 0)
+            return $"[{t}]";
+        return n.Length > 0 ? n : "";
     }
 
     partial void OnStandingDisplayChanged(string value)

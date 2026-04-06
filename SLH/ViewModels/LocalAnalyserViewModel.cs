@@ -276,14 +276,22 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                     continue;
                 if (!corpByChar.TryGetValue(charId, out var coid))
                     continue;
-                if (_diskCache.TryGetCorporation(coid, out var tick, out _) && !string.IsNullOrWhiteSpace(tick))
+                if (_diskCache.TryGetCorporation(coid, out var tick, out var corpNm) && !string.IsNullOrWhiteSpace(tick))
                 {
                     row.CorpTicker = tick;
+                    row.CorpName = corpNm ?? "";
                     if (allianceByChar.TryGetValue(charId, out var alId) && alId > 0 &&
-                        _diskCache.TryGetAlliance(alId, out var aTick, out _) && !string.IsNullOrWhiteSpace(aTick))
+                        _diskCache.TryGetAlliance(alId, out var aTick, out var allyNm) && !string.IsNullOrWhiteSpace(aTick))
+                    {
                         row.AllianceTicker = aTick;
+                        row.AllianceName = allyNm ?? "";
+                    }
                     else
+                    {
                         row.AllianceTicker = "";
+                        row.AllianceName = "";
+                    }
+
                     UpdatePilotSubtitle(row);
                 }
             }
@@ -509,13 +517,29 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                 if (!corpByChar.TryGetValue(charId, out var coid))
                     continue;
                 if (corpTicker.TryGetValue(coid, out var tick))
+                {
                     row.CorpTicker = tick;
+                    _diskCache.TryGetCorporation(coid, out _, out var cn);
+                    row.CorpName = cn ?? "";
+                }
                 else
+                {
                     row.CorpTicker = "";
+                    row.CorpName = "";
+                }
+
                 if (allianceByChar.TryGetValue(charId, out var alId) && alId > 0 && allianceTicker.TryGetValue(alId, out var atick))
+                {
                     row.AllianceTicker = atick;
+                    _diskCache.TryGetAlliance(alId, out _, out var an);
+                    row.AllianceName = an ?? "";
+                }
                 else
+                {
                     row.AllianceTicker = "";
+                    row.AllianceName = "";
+                }
+
                 UpdatePilotSubtitle(row);
             }
 
@@ -710,9 +734,12 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         CancellationToken cancellationToken)
     {
         string ticker;
-        if (_diskCache.TryGetCorporation(corpId, out var cachedTicker, out _) && !string.IsNullOrWhiteSpace(cachedTicker))
+        var corpDisplayName = "";
+        if (_diskCache.TryGetCorporation(corpId, out var cachedTicker, out var cachedCorpName) &&
+            !string.IsNullOrWhiteSpace(cachedTicker))
         {
             ticker = cachedTicker;
+            corpDisplayName = cachedCorpName ?? "";
         }
         else
         {
@@ -723,6 +750,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                 if (corp.Model?.Ticker != null)
                 {
                     ticker = corp.Model.Ticker;
+                    corpDisplayName = corp.Model.Name ?? "";
                     _diskCache.RememberCorporation(corpId, corp.Model.Ticker, corp.Model.Name);
                 }
             }
@@ -733,10 +761,15 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         }
 
         var allyTicker = "";
+        var allyDisplayName = "";
         if (allianceId is { } aid && aid > 0)
         {
-            if (_diskCache.TryGetAlliance(aid, out var cachedAlly, out _) && !string.IsNullOrWhiteSpace(cachedAlly))
+            if (_diskCache.TryGetAlliance(aid, out var cachedAlly, out var cachedAllyName) &&
+                !string.IsNullOrWhiteSpace(cachedAlly))
+            {
                 allyTicker = cachedAlly;
+                allyDisplayName = cachedAllyName ?? "";
+            }
             else
             {
                 try
@@ -745,6 +778,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                     if (all.Model?.Ticker != null)
                     {
                         allyTicker = all.Model.Ticker;
+                        allyDisplayName = all.Model.Name ?? "";
                         _diskCache.RememberAlliance(aid, all.Model.Ticker, all.Model.Name);
                     }
                 }
@@ -761,7 +795,9 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                 return;
 
             row.CorpTicker = ticker;
+            row.CorpName = corpDisplayName;
             row.AllianceTicker = allyTicker;
+            row.AllianceName = allyDisplayName;
             UpdatePilotSubtitle(row);
 
             if (_eve.IsAuthenticated)
