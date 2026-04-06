@@ -20,6 +20,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
     private readonly ISettingsStore _settings;
     private readonly HeaderState _header;
     private readonly ZkillClient _zkill;
+    private readonly EnrichmentDiskCache _diskCache;
     private readonly LocalChatLogWatcher _watcher;
     private readonly Dictionary<string, PilotRowViewModel> _rows = new(StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim _enrichGate = new(1, 1);
@@ -37,6 +38,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         ISettingsStore settings,
         HeaderState header,
         ZkillClient zkill,
+        EnrichmentDiskCache diskCache,
         LocalChatLogWatcher watcher)
     {
         _eve = eve;
@@ -44,6 +46,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         _settings = settings;
         _header = header;
         _zkill = zkill;
+        _diskCache = diskCache;
         _watcher = watcher;
         _watcher.NewLines += OnLogLines;
     }
@@ -147,6 +150,17 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         try
         {
             _eve.InitializeApi();
+            var pendingNames = _rows.Values.Where(r => r.CharacterId is null or 0).Select(r => r.Name).Distinct().ToList();
+            foreach (var nm in pendingNames)
+            {
+                if (!_diskCache.TryGetCharacterId(nm, out var cachedId))
+                    continue;
+                if (!_rows.TryGetValue(nm, out var row))
+                    continue;
+                row.CharacterId = cachedId;
+                row.PortraitUrl = $"https://images.evetech.net/characters/{cachedId}/portrait?tenant=tranquility&size=64";
+            }
+
             var pending = _rows.Values.Where(r => r.CharacterId is null or 0).Select(r => r.Name).Distinct().ToList();
             if (pending.Count > 0)
             {
@@ -164,6 +178,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                             continue;
                         row.CharacterId = c.Id;
                         row.PortraitUrl = $"https://images.evetech.net/characters/{c.Id}/portrait?tenant=tranquility&size=64";
+                        _diskCache.RememberCharacterId(c.Name, c.Id);
                     }
                 }
             }
@@ -178,10 +193,25 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
 
             var corpByChar = new Dictionary<long, long>();
             var allianceByChar = new Dictionary<long, long>();
-            for (var offset = 0; offset < ids.Count; offset += AffiliationBatchSize)
+            var needAffiliation = new List<long>();
+            foreach (var id in ids)
             {
-                var take = Math.Min(AffiliationBatchSize, ids.Count - offset);
-                var chunk = ids.GetRange(offset, take);
+                if (_diskCache.TryGetAffiliation(id, out var cCorp, out var cAlliance))
+                {
+                    corpByChar[id] = cCorp;
+                    if (cAlliance is { } ca && ca > 0)
+                        allianceByChar[id] = ca;
+                }
+                else
+                {
+                    needAffiliation.Add(id);
+                }
+            }
+
+            for (var offset = 0; offset < needAffiliation.Count; offset += AffiliationBatchSize)
+            {
+                var take = Math.Min(AffiliationBatchSize, needAffiliation.Count - offset);
+                var chunk = needAffiliation.GetRange(offset, take);
                 var aff = await _eve.Api.Character.AffiliationAsync(chunk).WaitAsync(cancellationToken).ConfigureAwait(false);
                 var affList = aff.Model;
                 if (affList == null)
@@ -191,6 +221,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                     corpByChar[a.CharacterId] = a.CorporationId;
                     if (a.AllianceId is { } aid && aid > 0)
                         allianceByChar[a.CharacterId] = aid;
+                    _diskCache.RememberAffiliation(a.CharacterId, a.CorporationId, a.AllianceId);
                 }
             }
 
@@ -198,11 +229,20 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
             var corpTicker = new Dictionary<long, string>();
             foreach (var cid in corpIds)
             {
+                if (_diskCache.TryGetCorporation(cid, out var cachedTicker, out _))
+                {
+                    corpTicker[cid] = cachedTicker;
+                    continue;
+                }
+
                 try
                 {
                     var corp = await _eve.Api.Corporation.GetCorporationInfoAsync(cid).WaitAsync(cancellationToken).ConfigureAwait(false);
                     if (corp.Model?.Ticker != null)
+                    {
                         corpTicker[cid] = corp.Model.Ticker;
+                        _diskCache.RememberCorporation(cid, corp.Model.Ticker, corp.Model.Name);
+                    }
                 }
                 catch
                 {

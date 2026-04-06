@@ -10,6 +10,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly EveConnectionService _eve;
     private readonly ISettingsStore _settings;
     private readonly ZkillClient _zkill;
+    private readonly EnrichmentDiskCache _enrichmentCache;
     private readonly LocalChatLogWatcher _logWatcher;
     private readonly DispatcherTimer _locationTimer;
 
@@ -27,17 +28,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         ISettingsStore settings,
         HeaderState header,
         ZkillClient zkill,
+        EnrichmentDiskCache enrichmentCache,
         LocalChatLogWatcher logWatcher)
     {
         _eve = eve;
         _settings = settings;
         _zkill = zkill;
+        _enrichmentCache = enrichmentCache;
         _logWatcher = logWatcher;
         Header = header;
 
-        Local = new LocalAnalyserViewModel(eve, contactStandings, settings, header, zkill, logWatcher);
+        Local = new LocalAnalyserViewModel(eve, contactStandings, settings, header, zkill, enrichmentCache, logWatcher);
         Dscan = new DscanViewModel();
-        Lookup = new CharacterLookupViewModel(eve, zkill, settings);
+        Lookup = new CharacterLookupViewModel(eve, zkill, settings, enrichmentCache);
         Settings = new SettingsViewModel(settings, eve, OnSettingsSaved, msg => Header.SystemLine = $"Login failed: {msg}");
 
         _locationTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(45) };
@@ -129,6 +132,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _locationTimer.Stop();
         _locationTimer.Tick -= OnLocationTick;
         Local.Dispose();
+        _enrichmentCache.Dispose();
         _zkill.Dispose();
     }
 }

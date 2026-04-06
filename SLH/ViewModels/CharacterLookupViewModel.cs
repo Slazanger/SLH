@@ -12,6 +12,7 @@ public partial class CharacterLookupViewModel : ObservableObject
     private readonly EveConnectionService _eve;
     private readonly ZkillClient _zkill;
     private readonly ISettingsStore _settings;
+    private readonly EnrichmentDiskCache _diskCache;
 
     [ObservableProperty] private string _searchName = "";
     [ObservableProperty] private string _status = "";
@@ -43,11 +44,13 @@ public partial class CharacterLookupViewModel : ObservableObject
 
     partial void OnZkillCynoHintChanged(string value) => OnPropertyChanged(nameof(HasZkillCynoHint));
 
-    public CharacterLookupViewModel(EveConnectionService eve, ZkillClient zkill, ISettingsStore settings)
+    public CharacterLookupViewModel(EveConnectionService eve, ZkillClient zkill, ISettingsStore settings,
+        EnrichmentDiskCache diskCache)
     {
         _eve = eve;
         _zkill = zkill;
         _settings = settings;
+        _diskCache = diskCache;
     }
 
     partial void OnStatusChanged(string value) => OnPropertyChanged(nameof(ShowStatus));
@@ -88,21 +91,48 @@ public partial class CharacterLookupViewModel : ObservableObject
         try
         {
             _eve.InitializeApi();
-            var bulk = await _eve.Api.Universe.BulkNamesToIdsAsync(new List<string> { q }).WaitAsync(cancellationToken).ConfigureAwait(false);
-            var match = bulk.Model?.Characters?.FirstOrDefault(c => c.Name.Equals(q, StringComparison.OrdinalIgnoreCase));
-            if (match == null)
+            long resolvedId;
+            if (_diskCache.TryGetCharacterId(q, out var cachedCharId))
             {
-                await Dispatcher.UIThread.InvokeAsync(() => Status = "No exact character match from ESI.");
-                return;
+                resolvedId = cachedCharId;
+            }
+            else
+            {
+                var bulk = await _eve.Api.Universe.BulkNamesToIdsAsync(new List<string> { q }).WaitAsync(cancellationToken).ConfigureAwait(false);
+                var match = bulk.Model?.Characters?.FirstOrDefault(c => c.Name.Equals(q, StringComparison.OrdinalIgnoreCase));
+                if (match == null)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() => Status = "No exact character match from ESI.");
+                    return;
+                }
+
+                resolvedId = match.Id;
+                _diskCache.RememberCharacterId(match.Name, match.Id);
             }
 
-            var info = await _eve.Api.Character.GetCharacterPublicInfoAsync(match.Id).WaitAsync(cancellationToken).ConfigureAwait(false);
+            var info = await _eve.Api.Character.GetCharacterPublicInfoAsync(resolvedId).WaitAsync(cancellationToken).ConfigureAwait(false);
+            var resolvedDisplayName = string.IsNullOrWhiteSpace(info.Model?.Name) ? q : info.Model.Name;
+            _diskCache.RememberCharacterId(resolvedDisplayName, resolvedId);
+
             string corpName = "", corpTicker = "";
             if (info.Model != null)
             {
-                var corp = await _eve.Api.Corporation.GetCorporationInfoAsync(info.Model.CorporationId).WaitAsync(cancellationToken).ConfigureAwait(false);
-                corpName = corp.Model?.Name ?? "";
-                corpTicker = corp.Model?.Ticker ?? "";
+                var corpId = info.Model.CorporationId;
+                if (_diskCache.TryGetCorporation(corpId, out var t, out var n)
+                    && !string.IsNullOrWhiteSpace(t)
+                    && !string.IsNullOrWhiteSpace(n))
+                {
+                    corpTicker = t;
+                    corpName = n;
+                }
+                else
+                {
+                    var corp = await _eve.Api.Corporation.GetCorporationInfoAsync(corpId).WaitAsync(cancellationToken).ConfigureAwait(false);
+                    corpName = corp.Model?.Name ?? "";
+                    corpTicker = corp.Model?.Ticker ?? "";
+                    if (!string.IsNullOrWhiteSpace(corpTicker))
+                        _diskCache.RememberCorporation(corpId, corpTicker, corpName);
+                }
             }
 
             var shipsDestroyed = 0;
@@ -117,7 +147,7 @@ public partial class CharacterLookupViewModel : ObservableObject
             var zkillCynoHint = "";
             if (_settings.Load().EnableZkillIntel)
             {
-                var stats = await _zkill.GetCharacterStatsAsync(match.Id, cancellationToken).ConfigureAwait(false);
+                var stats = await _zkill.GetCharacterStatsAsync(resolvedId, cancellationToken).ConfigureAwait(false);
                 if (stats != null)
                 {
                     shipsDestroyed = stats.ShipsDestroyed;
@@ -133,7 +163,7 @@ public partial class CharacterLookupViewModel : ObservableObject
                 }
             }
 
-            var portraitUrl = $"https://images.evetech.net/characters/{match.Id}/portrait?tenant=tranquility&size=256";
+            var portraitUrl = $"https://images.evetech.net/characters/{resolvedId}/portrait?tenant=tranquility&size=256";
             Bitmap? portrait = null;
             try
             {
@@ -153,8 +183,8 @@ public partial class CharacterLookupViewModel : ObservableObject
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                CharacterId = match.Id;
-                ResolvedName = match.Name;
+                CharacterId = resolvedId;
+                ResolvedName = resolvedDisplayName;
                 PortraitUrl = portraitUrl;
                 CorpName = corpName;
                 CorpTicker = corpTicker;

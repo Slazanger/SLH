@@ -8,4 +8,6 @@ public static class AppPaths
     public static string SettingsPath => Path.Combine(AppDataDirectory, "settings.json");
 
     public static string TokenPath => Path.Combine(AppDataDirectory, "session.protected");
+
+    public static string EnrichmentCachePath => Path.Combine(AppDataDirectory, "enrichment-cache.json");
 }

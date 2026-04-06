@@ -33,10 +33,12 @@ public sealed class ZkillClient : IDisposable
     private readonly TimeSpan _minIntervalBetweenRequests;
     private readonly int _max429Attempts;
     private readonly SemaphoreSlim _requestGate = new(1, 1);
+    private readonly EnrichmentDiskCache? _diskCache;
     private DateTimeOffset _earliestNextRequestUtc = DateTimeOffset.MinValue;
 
-    public ZkillClient(IConfiguration configuration)
+    public ZkillClient(IConfiguration configuration, EnrichmentDiskCache? diskCache = null)
     {
+        _diskCache = diskCache;
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
         var ua = configuration["UserAgent"] ?? "SLH/0.1";
         _http.DefaultRequestHeaders.UserAgent.ParseAdd(ua);
@@ -55,6 +57,9 @@ public sealed class ZkillClient : IDisposable
 
     public async Task<ZkillStats?> GetCharacterStatsAsync(long characterId, CancellationToken cancellationToken = default)
     {
+        if (_diskCache != null && _diskCache.TryGetZkillStats(characterId, out var diskStats) && diskStats != null)
+            return diskStats;
+
         await _requestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -113,7 +118,7 @@ public sealed class ZkillClient : IDisposable
                     var buckets = BuildActivityBuckets(root, characterId, shipsDestroyed);
 
                     _earliestNextRequestUtc = DateTimeOffset.UtcNow.Add(_minIntervalBetweenRequests);
-                    return new ZkillStats
+                    var built = new ZkillStats
                     {
                         ShipsDestroyed = shipsDestroyed,
                         ShipsLost = shipsLost,
@@ -132,6 +137,8 @@ public sealed class ZkillClient : IDisposable
                         ThreatLabel = threat.Label,
                         ActivityBuckets = buckets
                     };
+                    _diskCache?.RememberZkillStats(characterId, built);
+                    return built;
                 }
                 catch
                 {
