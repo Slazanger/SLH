@@ -105,8 +105,14 @@
 
                     <StackPanel IsVisible="{Binding SelectedPilot, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}" Spacing="4">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Border Width="44" Height="44" CornerRadius="0" Background="#0a0e14" BorderBrush="#2A4B7C" BorderThickness="1">
-                                <TextBlock Text="♦" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Foreground="#5a7090"/>
+                            <Border Width="44" Height="44" CornerRadius="0" Background="#0a0e14" BorderBrush="#2A4B7C" BorderThickness="1" ClipToBounds="True"
+                                    DataContext="{Binding SelectedPilot}">
+                                <Panel>
+                                    <Image Width="44" Height="44" Source="{Binding PortraitBitmap}" Stretch="UniformToFill"
+                                           IsVisible="{Binding PortraitBitmap, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}"/>
+                                    <TextBlock Text="♦" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Foreground="#5a7090"
+                                               IsVisible="{Binding PortraitBitmap, Converter={x:Static avalconv:ObjectConverters.IsNull}}"/>
+                                </Panel>
                             </Border>
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="{Binding SelectedPilot.Subtitle}" FontWeight="SemiBold" FontSize="11" TextWrapping="Wrap"
