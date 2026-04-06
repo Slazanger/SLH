@@ -22,7 +22,15 @@
 
             <CheckBox Content="zKill intel" IsChecked="{Binding EnableZkillIntel}"/>
 
-            <Button Content="Save" Command="{Binding SaveCommand}" HorizontalAlignment="Left"/>
+            <StackPanel Spacing="4" Margin="0,10,0,0">
+                <TextBlock Text="Enrichment cache" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8"/>
+                <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="10"
+                           Text="Clears the on-disk cache (character names, corporations, affiliations, zKill snapshots). Next paste or lookup will refetch."/>
+                <Button Content="Clear enrichment cache" Command="{Binding ClearEnrichmentCacheCommand}" Padding="10,4"
+                        HorizontalAlignment="Left"/>
+            </StackPanel>
+
+            <Button Content="Save" Command="{Binding SaveCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

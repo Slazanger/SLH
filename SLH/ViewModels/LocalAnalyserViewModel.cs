@@ -25,6 +25,8 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
     private readonly Dictionary<string, PilotRowViewModel> _rows = new(StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim _enrichGate = new(1, 1);
     private CancellationTokenSource? _enrichDebounce;
+    private CancellationTokenSource? _selectionRefreshCts;
+    private static readonly TimeSpan SelectedPilotDiskCacheRefreshAge = TimeSpan.FromDays(1);
     private int _lastLocalCount;
 
     public ObservableCollection<PilotRowViewModel> Pilots { get; } = new();
@@ -384,6 +386,10 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedPilotChanged(PilotRowViewModel? value)
     {
+        _selectionRefreshCts?.Cancel();
+        _selectionRefreshCts?.Dispose();
+        _selectionRefreshCts = null;
+
         if (value == null)
         {
             DetailNotes = "";
@@ -393,6 +399,116 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         DetailNotes = string.IsNullOrWhiteSpace(value.StandingDisplay)
             ? ""
             : $"Standing (contacts): {value.StandingDisplay}";
+
+        if (value.CharacterId is not > 0)
+            return;
+
+        _selectionRefreshCts = new CancellationTokenSource();
+        var token = _selectionRefreshCts.Token;
+        var row = value;
+        _ = Task.Run(() => RefreshSelectedPilotIfDiskStaleAsync(row, token), token);
+    }
+
+    private async Task RefreshSelectedPilotIfDiskStaleAsync(PilotRowViewModel row, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var id = row.CharacterId;
+            if (id is not > 0)
+                return;
+
+            var needZkill = _settings.Load().EnableZkillIntel && _diskCache.IsZkillDiskCacheStale(id.Value, SelectedPilotDiskCacheRefreshAge);
+            var needAff = _diskCache.IsAffiliationDiskCacheStale(id.Value, SelectedPilotDiskCacheRefreshAge);
+            if (!needZkill && !needAff)
+                return;
+
+            _eve.InitializeApi();
+
+            if (needAff)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var aff = await _eve.Api.Character.AffiliationAsync(new List<long> { id.Value }).WaitAsync(cancellationToken).ConfigureAwait(false);
+                var entry = aff.Model?.FirstOrDefault(a => a.CharacterId == id.Value);
+                if (entry != null)
+                {
+                    long? alliance = entry.AllianceId is { } aid && aid > 0 ? aid : null;
+                    _diskCache.RememberAffiliation(id.Value, entry.CorporationId, entry.AllianceId);
+                    await ApplyAffiliationToRowAsync(row, id.Value, entry.CorporationId, alliance, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            if (needZkill)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                _diskCache.InvalidateZkillStats(id.Value);
+                await EnrichPilotAsync(row, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // selection changed or dispose
+        }
+        catch
+        {
+            // ESI / zKill — leave existing row data
+        }
+    }
+
+    private async Task ApplyAffiliationToRowAsync(PilotRowViewModel row, long charId, long corpId, long? allianceId,
+        CancellationToken cancellationToken)
+    {
+        string ticker;
+        if (_diskCache.TryGetCorporation(corpId, out var cachedTicker, out _) && !string.IsNullOrWhiteSpace(cachedTicker))
+        {
+            ticker = cachedTicker;
+        }
+        else
+        {
+            ticker = "";
+            try
+            {
+                var corp = await _eve.Api.Corporation.GetCorporationInfoAsync(corpId).WaitAsync(cancellationToken).ConfigureAwait(false);
+                if (corp.Model?.Ticker != null)
+                {
+                    ticker = corp.Model.Ticker;
+                    _diskCache.RememberCorporation(corpId, corp.Model.Ticker, corp.Model.Name);
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+        }
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (cancellationToken.IsCancellationRequested || !ReferenceEquals(SelectedPilot, row))
+                return;
+
+            if (!string.IsNullOrWhiteSpace(ticker))
+            {
+                row.CorpTicker = ticker;
+                row.Subtitle = $"{row.Name} [{ticker}]";
+            }
+            else
+            {
+                row.Subtitle = row.Name;
+            }
+
+            if (_eve.IsAuthenticated)
+            {
+                var effective = _contactStandings.GetEffectiveStanding(charId, corpId, allianceId);
+                row.ApplyStanding(effective);
+                DetailNotes = string.IsNullOrWhiteSpace(row.StandingDisplay)
+                    ? ""
+                    : $"Standing (contacts): {row.StandingDisplay}";
+            }
+            else
+            {
+                row.ClearStandingVisual();
+                DetailNotes = "";
+            }
+        });
     }
 
     public void Dispose()
@@ -401,6 +517,8 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         _watcher.Dispose();
         _enrichDebounce?.Cancel();
         _enrichDebounce?.Dispose();
+        _selectionRefreshCts?.Cancel();
+        _selectionRefreshCts?.Dispose();
         _enrichGate.Dispose();
     }
 }

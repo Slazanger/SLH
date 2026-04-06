@@ -165,6 +165,65 @@ public sealed class EnrichmentDiskCache : IDisposable
         ScheduleSave();
     }
 
+    /// <summary>True if there is no zKill disk entry or it is older than <paramref name="maxAge"/>.</summary>
+    public bool IsZkillDiskCacheStale(long characterId, TimeSpan maxAge)
+    {
+        if (characterId <= 0)
+            return false;
+        EnsureLoaded();
+        lock (_gate)
+        {
+            if (!_zkillByChar.TryGetValue(characterId, out var rec))
+                return true;
+            return DateTimeOffset.UtcNow - rec.CachedAt > maxAge;
+        }
+    }
+
+    /// <summary>True if there is no affiliation disk entry or it is older than <paramref name="maxAge"/>.</summary>
+    public bool IsAffiliationDiskCacheStale(long characterId, TimeSpan maxAge)
+    {
+        if (characterId <= 0)
+            return false;
+        EnsureLoaded();
+        lock (_gate)
+        {
+            if (!_affByChar.TryGetValue(characterId, out var rec))
+                return true;
+            return DateTimeOffset.UtcNow - rec.CachedAt > maxAge;
+        }
+    }
+
+    /// <summary>Removes zKill cache for this character so the next fetch goes to the network.</summary>
+    public void InvalidateZkillStats(long characterId)
+    {
+        if (characterId <= 0)
+            return;
+        lock (_gate)
+        {
+            _zkillByChar.Remove(characterId);
+        }
+
+        ScheduleSave();
+    }
+
+    /// <summary>Clears all cached enrichment data from memory and overwrites the cache file on disk.</summary>
+    public void ClearAll()
+    {
+        Timer? timer;
+        lock (_gate)
+        {
+            timer = _saveTimer;
+            _saveTimer = null;
+            _namesToId = new Dictionary<string, long>(StringComparer.Ordinal);
+            _corpById.Clear();
+            _affByChar.Clear();
+            _zkillByChar.Clear();
+        }
+
+        timer?.Dispose();
+        Flush();
+    }
+
     public void Dispose()
     {
         Timer? timer;

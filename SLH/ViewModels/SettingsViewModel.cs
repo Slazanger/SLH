@@ -10,6 +10,7 @@ public partial class SettingsViewModel : ObservableObject
 {
     private readonly ISettingsStore _settingsStore;
     private readonly EveConnectionService _eve;
+    private readonly EnrichmentDiskCache _enrichmentCache;
     private readonly Action _onSaved;
     private readonly Action<string>? _onLoginFailed;
 
@@ -19,11 +20,13 @@ public partial class SettingsViewModel : ObservableObject
     public SettingsViewModel(
         ISettingsStore settingsStore,
         EveConnectionService eve,
+        EnrichmentDiskCache enrichmentCache,
         Action onSaved,
         Action<string>? onLoginFailed = null)
     {
         _settingsStore = settingsStore;
         _eve = eve;
+        _enrichmentCache = enrichmentCache;
         _onSaved = onSaved;
         _onLoginFailed = onLoginFailed;
         Reload();
@@ -66,6 +69,12 @@ public partial class SettingsViewModel : ObservableObject
         {
             await Dispatcher.UIThread.InvokeAsync(() => _onLoginFailed?.Invoke(ex.Message));
         }
+    }
+
+    [RelayCommand]
+    private void ClearEnrichmentCache()
+    {
+        _enrichmentCache.ClearAll();
     }
 
 }
