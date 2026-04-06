@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -37,6 +38,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
     [ObservableProperty] private PilotRowViewModel? _selectedPilot;
     [ObservableProperty] private string _detailNotes = "";
     [ObservableProperty] private string _activityHeatmapUtcLine = "";
+    [ObservableProperty] private bool _showLocalEmptyPlaceholder = true;
 
     private readonly DispatcherTimer _activityUtcTimer;
 
@@ -60,7 +62,12 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
 
         _activityUtcTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
         _activityUtcTimer.Tick += OnActivityUtcTick;
+
+        Pilots.CollectionChanged += OnPilotsCollectionChanged;
     }
+
+    private void OnPilotsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
+        ShowLocalEmptyPlaceholder = Pilots.Count == 0;
 
     private void OnActivityUtcTick(object? sender, EventArgs e)
     {
@@ -708,6 +715,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        Pilots.CollectionChanged -= OnPilotsCollectionChanged;
         _watcher.NewLines -= OnLogLines;
         _watcher.Dispose();
         _enrichDebounce?.Cancel();
