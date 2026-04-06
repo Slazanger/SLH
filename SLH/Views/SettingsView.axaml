@@ -16,6 +16,12 @@
             </StackPanel>
 
             <StackPanel Spacing="2">
+                <TextBlock Text="Logged in as" FontSize="10" Opacity="0.8"/>
+                <TextBlock Text="{Binding LoggedInCharacterLine}" FontWeight="SemiBold" FontSize="11"
+                           Foreground="#00b8c8" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <StackPanel Spacing="2">
                 <TextBlock Text="ChatLogs folder" FontSize="10" Opacity="0.8"/>
                 <TextBox Text="{Binding ChatLogsFolder}" Watermark="...\EVE\logs\ChatLogs"/>
             </StackPanel>

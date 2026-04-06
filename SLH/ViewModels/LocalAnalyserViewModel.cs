@@ -279,7 +279,12 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                 if (_diskCache.TryGetCorporation(coid, out var tick, out _) && !string.IsNullOrWhiteSpace(tick))
                 {
                     row.CorpTicker = tick;
-                    row.Subtitle = $"{row.Name} [{tick}]";
+                    if (allianceByChar.TryGetValue(charId, out var alId) && alId > 0 &&
+                        _diskCache.TryGetAlliance(alId, out var aTick, out _) && !string.IsNullOrWhiteSpace(aTick))
+                        row.AllianceTicker = aTick;
+                    else
+                        row.AllianceTicker = "";
+                    UpdatePilotSubtitle(row);
                 }
             }
 
@@ -303,6 +308,16 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         _pilotOrder.Add(name);
         if (!ShouldHidePilot(row))
             Pilots.Add(row);
+    }
+
+    private static void UpdatePilotSubtitle(PilotRowViewModel row)
+    {
+        var tail = "";
+        if (!string.IsNullOrWhiteSpace(row.CorpTicker))
+            tail += $" [{row.CorpTicker}]";
+        if (!string.IsNullOrWhiteSpace(row.AllianceTicker))
+            tail += $" [{row.AllianceTicker}]";
+        row.Subtitle = tail.Length == 0 ? row.Name : $"{row.Name}{tail}";
     }
 
     private void RemovePilot(string name)
@@ -462,6 +477,31 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                 }
             }
 
+            var allianceIds = allianceByChar.Values.Where(a => a > 0).Distinct().ToList();
+            var allianceTicker = new Dictionary<long, string>();
+            foreach (var aid in allianceIds)
+            {
+                if (_diskCache.TryGetAlliance(aid, out var cachedAt, out _) && !string.IsNullOrWhiteSpace(cachedAt))
+                {
+                    allianceTicker[aid] = cachedAt;
+                    continue;
+                }
+
+                try
+                {
+                    var all = await _eve.Api.Alliance.GetAllianceInfoAsync(aid).WaitAsync(cancellationToken).ConfigureAwait(false);
+                    if (all.Model?.Ticker != null)
+                    {
+                        allianceTicker[aid] = all.Model.Ticker;
+                        _diskCache.RememberAlliance(aid, all.Model.Ticker, all.Model.Name);
+                    }
+                }
+                catch
+                {
+                    // ignore
+                }
+            }
+
             foreach (var row in _rows.Values)
             {
                 if (row.CharacterId is not { } charId)
@@ -469,12 +509,14 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                 if (!corpByChar.TryGetValue(charId, out var coid))
                     continue;
                 if (corpTicker.TryGetValue(coid, out var tick))
-                {
                     row.CorpTicker = tick;
-                    row.Subtitle = $"{row.Name} [{tick}]";
-                }
                 else
-                    row.Subtitle = row.Name;
+                    row.CorpTicker = "";
+                if (allianceByChar.TryGetValue(charId, out var alId) && alId > 0 && allianceTicker.TryGetValue(alId, out var atick))
+                    row.AllianceTicker = atick;
+                else
+                    row.AllianceTicker = "";
+                UpdatePilotSubtitle(row);
             }
 
             var zkillTargets = await Dispatcher.UIThread.InvokeAsync(() =>
@@ -690,20 +732,37 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
             }
         }
 
+        var allyTicker = "";
+        if (allianceId is { } aid && aid > 0)
+        {
+            if (_diskCache.TryGetAlliance(aid, out var cachedAlly, out _) && !string.IsNullOrWhiteSpace(cachedAlly))
+                allyTicker = cachedAlly;
+            else
+            {
+                try
+                {
+                    var all = await _eve.Api.Alliance.GetAllianceInfoAsync(aid).WaitAsync(cancellationToken).ConfigureAwait(false);
+                    if (all.Model?.Ticker != null)
+                    {
+                        allyTicker = all.Model.Ticker;
+                        _diskCache.RememberAlliance(aid, all.Model.Ticker, all.Model.Name);
+                    }
+                }
+                catch
+                {
+                    // ignore
+                }
+            }
+        }
+
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             if (cancellationToken.IsCancellationRequested || !ReferenceEquals(SelectedPilot, row))
                 return;
 
-            if (!string.IsNullOrWhiteSpace(ticker))
-            {
-                row.CorpTicker = ticker;
-                row.Subtitle = $"{row.Name} [{ticker}]";
-            }
-            else
-            {
-                row.Subtitle = row.Name;
-            }
+            row.CorpTicker = ticker;
+            row.AllianceTicker = allyTicker;
+            UpdatePilotSubtitle(row);
 
             if (_eve.IsAuthenticated)
             {

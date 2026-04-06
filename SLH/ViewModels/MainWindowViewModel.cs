@@ -41,7 +41,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         Local = new LocalAnalyserViewModel(eve, contactStandings, settings, header, zkill, enrichmentCache, logWatcher);
         Dscan = new DscanViewModel();
         Lookup = new CharacterLookupViewModel(eve, zkill, settings, enrichmentCache);
-        Settings = new SettingsViewModel(settings, eve, enrichmentCache, OnSettingsApplied,
+        Settings = new SettingsViewModel(settings, eve, enrichmentCache, header, OnSettingsApplied,
             msg => Header.SystemLine = $"Login failed: {msg}");
 
         _locationTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(45) };

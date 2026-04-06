@@ -39,30 +39,19 @@
                     </ListBox.Styles>
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:PilotRowViewModel">
-                            <Border BorderThickness="2,0,0,0"
-                                    BorderBrush="{Binding StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
-                                    Padding="1,0,0,0"
-                                    ToolTip.Tip="{Binding RowTooltip}">
-                            <Grid ColumnDefinitions="18,*,Auto,Auto" Margin="0">
-                                <Panel Grid.Column="0" Width="16" Height="16" VerticalAlignment="Center">
-                                    <Border Width="16" Height="16" Background="#0a0e14" BorderBrush="#2d3d50" BorderThickness="1" ClipToBounds="True">
-                                        <Image Width="16" Height="16" Source="{Binding PortraitBitmap}" Stretch="UniformToFill"
-                                               IsVisible="{Binding PortraitBitmap, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}"/>
-                                    </Border>
-                                    <TextBlock Text="♦" FontSize="8" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#5a7090"
-                                               IsVisible="{Binding PortraitBitmap, Converter={x:Static avalconv:ObjectConverters.IsNull}}"/>
-                                </Panel>
-                                <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto" Margin="3,0,4,0" VerticalAlignment="Center">
-                                    <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"
-                                               FontSize="11" LineHeight="13" TextTrimming="CharacterEllipsis"
-                                               Opacity="{Binding ListNameOpacity}"
-                                               Foreground="{Binding StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding CorpTicker, StringFormat='[{0}]'}" VerticalAlignment="Center" Margin="4,0,0,0"
-                                               FontSize="9" Foreground="#8a9aaa" IsVisible="{Binding HasCorpTicker}"/>
-                                    <TextBlock Grid.Column="2" Text="{Binding StandingDisplay}" VerticalAlignment="Center" Margin="4,0,0,0"
-                                               FontSize="9" Foreground="#7a8a9a" IsVisible="{Binding HasStandingDisplay}"/>
-                                </Grid>
-                                <Panel Grid.Column="2" Margin="0,0,2,0" VerticalAlignment="Center">
+                            <Grid ColumnDefinitions="2,*" Margin="0">
+                            <Border Grid.Column="0" Width="2" VerticalAlignment="Stretch"
+                                    Background="{Binding StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}">
+                                <ToolTip.Tip>
+                                    <TextBlock Text="{Binding RowTooltip}" TextWrapping="Wrap" MaxWidth="280" FontSize="11"/>
+                                </ToolTip.Tip>
+                            </Border>
+                            <DockPanel Grid.Column="1" LastChildFill="True" Margin="1,0,0,0">
+                                <!-- Dock Right: first = outermost right (threat), then cyno, friendly, unresolved -->
+                                <Panel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="6,0,0,0">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="{Binding RowTooltip}" TextWrapping="Wrap" MaxWidth="280" FontSize="11"/>
+                                    </ToolTip.Tip>
                                     <Border Padding="4,2" BorderThickness="1" Background="#2a1f32" BorderBrush="#7B1FA2"
                                             IsVisible="{Binding ShowThreatPendingPlaceholder}">
                                         <TextBlock Text="????" FontWeight="SemiBold" FontSize="8" Foreground="#CE93D8"
@@ -80,17 +69,49 @@
                                         </StackPanel>
                                     </Border>
                                 </Panel>
-                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="3" VerticalAlignment="Center" Margin="2,0,0,0">
-                                    <TextBlock Text="?" FontSize="9" Foreground="#9a8a70" VerticalAlignment="Center" FontWeight="SemiBold"
-                                               ToolTip.Tip="Resolving character…"
-                                               IsVisible="{Binding IsCharacterUnresolved}"/>
-                                    <TextBlock Text="cyno" FontSize="7" Foreground="#CE93D8" VerticalAlignment="Center" FontWeight="SemiBold"
-                                               IsVisible="{Binding HasZkillCynoHint}"/>
-                                    <TextBlock Text="✓" Foreground="#388E3C" FontSize="8" VerticalAlignment="Center"
-                                               IsVisible="{Binding IsFriendly}"/>
+                                <Border DockPanel.Dock="Right" Background="Transparent" VerticalAlignment="Center" Margin="6,0,0,0"
+                                        IsVisible="{Binding HasZkillCynoHint}">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="{Binding RowTooltip}" TextWrapping="Wrap" MaxWidth="280" FontSize="11"/>
+                                    </ToolTip.Tip>
+                                    <TextBlock Text="cyno" FontSize="7" Foreground="#CE93D8" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                </Border>
+                                <TextBlock DockPanel.Dock="Right" Text="✓" Foreground="#388E3C" FontSize="8" VerticalAlignment="Center"
+                                           Margin="6,0,0,0" IsVisible="{Binding IsFriendly}"/>
+                                <TextBlock DockPanel.Dock="Right" Text="?" FontSize="9" Foreground="#9a8a70" VerticalAlignment="Center" FontWeight="SemiBold"
+                                           Margin="6,0,0,0" ToolTip.Tip="Resolving character…"
+                                           IsVisible="{Binding IsCharacterUnresolved}"/>
+
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                    <Panel Width="16" Height="16" VerticalAlignment="Center">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="{Binding RowTooltip}" TextWrapping="Wrap" MaxWidth="280" FontSize="11"/>
+                                        </ToolTip.Tip>
+                                        <Border Width="16" Height="16" Background="#0a0e14" BorderBrush="#2d3d50" BorderThickness="1" ClipToBounds="True">
+                                            <Image Width="16" Height="16" Source="{Binding PortraitBitmap}" Stretch="UniformToFill"
+                                                   IsVisible="{Binding PortraitBitmap, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}"/>
+                                        </Border>
+                                        <TextBlock Text="♦" FontSize="8" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#5a7090"
+                                                   IsVisible="{Binding PortraitBitmap, Converter={x:Static avalconv:ObjectConverters.IsNull}}"/>
+                                    </Panel>
+                                    <Border Background="Transparent" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="{Binding RowTooltip}" TextWrapping="Wrap" MaxWidth="280" FontSize="11"/>
+                                        </ToolTip.Tip>
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                       FontSize="11" LineHeight="13" TextTrimming="CharacterEllipsis"
+                                                       Opacity="{Binding ListNameOpacity}"
+                                                       Foreground="{Binding StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
+                                            <TextBlock Text="{Binding CorpTicker, StringFormat='[{0}]'}" VerticalAlignment="Center"
+                                                       FontSize="9" Foreground="#8a9aaa" IsVisible="{Binding HasCorpTicker}"/>
+                                            <TextBlock Text="{Binding AllianceTicker, StringFormat='[{0}]'}" VerticalAlignment="Center"
+                                                       FontSize="9" Foreground="#9aaa8a" IsVisible="{Binding HasAllianceTicker}"/>
+                                        </StackPanel>
+                                    </Border>
                                 </StackPanel>
+                            </DockPanel>
                             </Grid>
-                            </Border>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>

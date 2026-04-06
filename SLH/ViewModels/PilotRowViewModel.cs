@@ -13,6 +13,7 @@ public partial class PilotRowViewModel : ObservableObject
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private long? _characterId;
     [ObservableProperty] private string _corpTicker = "";
+    [ObservableProperty] private string _allianceTicker = "";
     [ObservableProperty] private string _subtitle = "";
     [ObservableProperty] private string _portraitUrl = "";
     [ObservableProperty] private Bitmap? _portraitBitmap;
@@ -55,6 +56,8 @@ public partial class PilotRowViewModel : ObservableObject
 
     public bool HasCorpTicker => !string.IsNullOrWhiteSpace(CorpTicker);
 
+    public bool HasAllianceTicker => !string.IsNullOrWhiteSpace(AllianceTicker);
+
     public bool HasStandingDisplay => !string.IsNullOrWhiteSpace(StandingDisplay);
 
     public double ListNameOpacity => CharacterId is > 0 ? 1.0 : 0.55;
@@ -91,6 +94,12 @@ public partial class PilotRowViewModel : ObservableObject
     partial void OnCorpTickerChanged(string value)
     {
         OnPropertyChanged(nameof(HasCorpTicker));
+        RefreshRowTooltip();
+    }
+
+    partial void OnAllianceTickerChanged(string value)
+    {
+        OnPropertyChanged(nameof(HasAllianceTicker));
         RefreshRowTooltip();
     }
 
@@ -199,6 +208,8 @@ public partial class PilotRowViewModel : ObservableObject
             parts.Add(Name);
         if (!string.IsNullOrWhiteSpace(CorpTicker))
             parts.Add($"[{CorpTicker}]");
+        if (!string.IsNullOrWhiteSpace(AllianceTicker))
+            parts.Add($"[{AllianceTicker}]");
         if (!string.IsNullOrWhiteSpace(StandingDisplay))
             parts.Add($"Standing {StandingDisplay}");
         if (CharacterId is not > 0)
@@ -209,7 +220,7 @@ public partial class PilotRowViewModel : ObservableObject
             parts.Add($"Threat {ThreatLabel} ({ThreatScore})");
         if (HasZkillCynoHint)
             parts.Add("Cyno hint (zKill)");
-        RowTooltip = string.Join(" · ", parts);
+        RowTooltip = string.Join(Environment.NewLine, parts);
     }
 
     public bool HasZkillDetail => !string.IsNullOrWhiteSpace(ZkillRatiosLine);

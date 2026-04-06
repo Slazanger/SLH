@@ -11,6 +11,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ISettingsStore _settingsStore;
     private readonly EveConnectionService _eve;
     private readonly EnrichmentDiskCache _enrichmentCache;
+    private readonly HeaderState _header;
     /// <summary>Arg: reload this view model from disk (use after login/logout); false when we already have the latest edits.</summary>
     private readonly Action<bool> _onSettingsApplied;
     private readonly Action<string>? _onLoginFailed;
@@ -20,19 +21,28 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _chatLogsFolder = "";
     [ObservableProperty] private bool _enableZkillIntel = true;
     [ObservableProperty] private bool _filterOutStandingPlus5Or10 = true;
+    [ObservableProperty] private string _loggedInCharacterLine = "";
 
     public SettingsViewModel(
         ISettingsStore settingsStore,
         EveConnectionService eve,
         EnrichmentDiskCache enrichmentCache,
+        HeaderState header,
         Action<bool> onSettingsApplied,
         Action<string>? onLoginFailed = null)
     {
         _settingsStore = settingsStore;
         _eve = eve;
         _enrichmentCache = enrichmentCache;
+        _header = header;
         _onSettingsApplied = onSettingsApplied;
         _onLoginFailed = onLoginFailed;
+
+        _header.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(HeaderState.CharacterDisplayName) or nameof(HeaderState.EsiConnected))
+                RefreshLoggedInCharacterLine();
+        };
 
         _folderPersistDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
         _folderPersistDebounce.Tick += (_, _) =>
@@ -43,6 +53,13 @@ public partial class SettingsViewModel : ObservableObject
         };
 
         Reload();
+    }
+
+    private void RefreshLoggedInCharacterLine()
+    {
+        LoggedInCharacterLine = _header.EsiConnected && !string.IsNullOrWhiteSpace(_header.CharacterDisplayName)
+            ? _header.CharacterDisplayName
+            : "Not logged in";
     }
 
     public void Reload()
@@ -59,6 +76,8 @@ public partial class SettingsViewModel : ObservableObject
         {
             _suppressPersist = false;
         }
+
+        RefreshLoggedInCharacterLine();
     }
 
     private void PersistToDisk(bool reloadSettingsView)

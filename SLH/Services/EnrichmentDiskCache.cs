@@ -24,6 +24,7 @@ public sealed class EnrichmentDiskCache : IDisposable
     private readonly string _path;
     private Dictionary<string, long> _namesToId = new(StringComparer.Ordinal);
     private Dictionary<long, CorpCacheRecord> _corpById = new();
+    private Dictionary<long, AllianceCacheRecord> _allianceById = new();
     private Dictionary<long, AffiliationCacheRecord> _affByChar = new();
     private Dictionary<long, ZkillCacheRecord> _zkillByChar = new();
     private Timer? _saveTimer;
@@ -93,6 +94,44 @@ public sealed class EnrichmentDiskCache : IDisposable
             else
             {
                 _corpById[corporationId] = new CorpCacheRecord { Ticker = ticker, Name = name ?? "" };
+            }
+        }
+
+        ScheduleSave();
+    }
+
+    /// <summary>Returns cached alliance ticker (and name when present).</summary>
+    public bool TryGetAlliance(long allianceId, out string ticker, out string name)
+    {
+        EnsureLoaded();
+        ticker = "";
+        name = "";
+        if (allianceId <= 0)
+            return false;
+        lock (_gate)
+        {
+            if (!_allianceById.TryGetValue(allianceId, out var rec))
+                return false;
+            ticker = rec.Ticker ?? "";
+            name = rec.Name ?? "";
+            return ticker.Length > 0;
+        }
+    }
+
+    public void RememberAlliance(long allianceId, string ticker, string? name = null)
+    {
+        if (allianceId <= 0 || string.IsNullOrWhiteSpace(ticker))
+            return;
+        lock (_gate)
+        {
+            if (_allianceById.TryGetValue(allianceId, out var existing))
+            {
+                var mergedName = string.IsNullOrWhiteSpace(name) ? existing.Name : name;
+                _allianceById[allianceId] = new AllianceCacheRecord { Ticker = ticker, Name = mergedName ?? "" };
+            }
+            else
+            {
+                _allianceById[allianceId] = new AllianceCacheRecord { Ticker = ticker, Name = name ?? "" };
             }
         }
 
@@ -216,6 +255,7 @@ public sealed class EnrichmentDiskCache : IDisposable
             _saveTimer = null;
             _namesToId = new Dictionary<string, long>(StringComparer.Ordinal);
             _corpById.Clear();
+            _allianceById.Clear();
             _affByChar.Clear();
             _zkillByChar.Clear();
         }
@@ -281,6 +321,17 @@ public sealed class EnrichmentDiskCache : IDisposable
                 }
             }
 
+            if (doc.Alliances != null)
+            {
+                foreach (var kv in doc.Alliances)
+                {
+                    if (kv.Value == null || kv.Key <= 0)
+                        continue;
+                    if (!string.IsNullOrWhiteSpace(kv.Value.Ticker))
+                        _allianceById[kv.Key] = kv.Value;
+                }
+            }
+
             if (doc.Affiliations != null)
             {
                 foreach (var kv in doc.Affiliations)
@@ -336,6 +387,7 @@ public sealed class EnrichmentDiskCache : IDisposable
                 Version = FileVersion,
                 NamesToCharacterId = new Dictionary<string, long>(_namesToId, StringComparer.Ordinal),
                 Corporations = new Dictionary<long, CorpCacheRecord>(_corpById),
+                Alliances = new Dictionary<long, AllianceCacheRecord>(_allianceById),
                 Affiliations = new Dictionary<long, AffiliationCacheRecord>(_affByChar),
                 Zkill = new Dictionary<long, ZkillCacheRecord>(_zkillByChar)
             };
@@ -372,11 +424,18 @@ public sealed class EnrichmentDiskCache : IDisposable
         public int Version { get; set; }
         public Dictionary<string, long>? NamesToCharacterId { get; set; }
         public Dictionary<long, CorpCacheRecord>? Corporations { get; set; }
+        public Dictionary<long, AllianceCacheRecord>? Alliances { get; set; }
         public Dictionary<long, AffiliationCacheRecord>? Affiliations { get; set; }
         public Dictionary<long, ZkillCacheRecord>? Zkill { get; set; }
     }
 
     private sealed class CorpCacheRecord
+    {
+        public string Ticker { get; set; } = "";
+        public string Name { get; set; } = "";
+    }
+
+    private sealed class AllianceCacheRecord
     {
         public string Ticker { get; set; } = "";
         public string Name { get; set; } = "";
