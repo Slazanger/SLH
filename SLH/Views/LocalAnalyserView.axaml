@@ -17,8 +17,10 @@
     <Grid ColumnDefinitions="*,248" Margin="0,2,0,0">
         <Grid Grid.Column="0" RowDefinitions="*" Margin="0,0,6,0">
             <Border x:Name="LocalPilotsHost" Classes="glass" Padding="4" ToolTip.Tip="Right-click for Paste or Clear">
-                <ListBox ItemsSource="{Binding Pilots}" SelectedItem="{Binding SelectedPilot}"
-                         Background="#0d1118" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <ListBox x:Name="LocalPilotsList" ItemsSource="{Binding Pilots}" SelectedItem="{Binding SelectedPilot}"
+                         Background="#0d1118" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                         DoubleTapped="OnLocalPilotsDoubleTapped"
+                         ToolTip.Tip="Double-click: open zKill (when character ID is resolved). Right-click: paste / clear.">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:PilotRowViewModel">
                             <Border BorderThickness="3,0,0,0"
