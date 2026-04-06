@@ -8,7 +8,12 @@
         <StackPanel Spacing="8" Margin="0,2,0,0">
             <TextBlock Text="EVE / ESI" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8"/>
             <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="10"
-                       Text="Client ID and callback port are compiled in (EsiBuildSettings.cs). Rebuild after changing them; callback URL must match http://127.0.0.1:&lt;port&gt;/callback/ (PKCE, no secret)."/>
+                       Text="Client ID and callback port are compiled in (EsiBuildSettings.cs). Rebuild after changing them."/>
+
+            <StackPanel Orientation="Horizontal" Spacing="4">
+                <Button Content="Log in with EVE" Command="{Binding LoginCommand}" Padding="10,4"/>
+                <Button Content="Log out" Command="{Binding LogoutCommand}" Padding="10,4"/>
+            </StackPanel>
 
             <StackPanel Spacing="2">
                 <TextBlock Text="ChatLogs folder" FontSize="10" Opacity="0.8"/>
@@ -17,10 +22,7 @@
 
             <CheckBox Content="zKill intel" IsChecked="{Binding EnableZkillIntel}"/>
 
-            <StackPanel Orientation="Horizontal" Spacing="4">
-                <Button Content="Save" Command="{Binding SaveCommand}"/>
-                <Button Content="Log out" Command="{Binding LogoutCommand}"/>
-            </StackPanel>
+            <Button Content="Save" Command="{Binding SaveCommand}" HorizontalAlignment="Left"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

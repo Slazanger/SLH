@@ -32,11 +32,13 @@ public partial class App : Application
             ISettingsStore settingsStore = new SettingsStore();
             var secure = new SecureSessionStore();
             var eve = new EveConnectionService(configuration, secure);
+            var contactStandings = new ContactStandingIndex(eve);
+            eve.ContactStandingCache = contactStandings;
             var header = new HeaderState();
             var zkill = new ZkillClient(configuration);
             var logWatcher = new LocalChatLogWatcher();
 
-            var mainVm = new MainWindowViewModel(eve, settingsStore, header, zkill, logWatcher);
+            var mainVm = new MainWindowViewModel(eve, contactStandings, settingsStore, header, zkill, logWatcher);
 
             var mainWindow = new MainWindow { DataContext = mainVm };
             mainWindow.Opened += async (_, _) => await mainVm.InitializeAsync();

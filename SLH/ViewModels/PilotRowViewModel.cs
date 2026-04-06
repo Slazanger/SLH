@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using SLH.Services;
 
 namespace SLH.ViewModels;
 
@@ -20,6 +21,20 @@ public partial class PilotRowViewModel : ObservableObject
     [ObservableProperty] private string _intelTip = "";
     [ObservableProperty] private bool _isFriendly;
     [ObservableProperty] private int[] _activityBuckets = new int[24];
+    [ObservableProperty] private string _standingForeground = EveStandingColors.DefaultText;
+    [ObservableProperty] private string _standingDisplay = "";
+
+    public void ClearStandingVisual()
+    {
+        StandingForeground = EveStandingColors.DefaultText;
+        StandingDisplay = "";
+    }
+
+    public void ApplyStanding(float effective)
+    {
+        StandingForeground = EveStandingColors.ForegroundForStanding(effective);
+        StandingDisplay = EveStandingColors.FormatStanding(effective);
+    }
 
     partial void OnThreatScoreChanged(int value)
     {

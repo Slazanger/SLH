@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
@@ -19,54 +20,122 @@ public sealed class ZkillStats
 public sealed class ZkillClient : IDisposable
 {
     private readonly HttpClient _http;
-    private readonly IConfiguration _configuration;
+    private readonly TimeSpan _minIntervalBetweenRequests;
+    private readonly int _max429Attempts;
+    private readonly SemaphoreSlim _requestGate = new(1, 1);
+    private DateTimeOffset _earliestNextRequestUtc = DateTimeOffset.MinValue;
 
     public ZkillClient(IConfiguration configuration)
     {
-        _configuration = configuration;
-        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
         var ua = configuration["UserAgent"] ?? "SLH/0.1";
         _http.DefaultRequestHeaders.UserAgent.ParseAdd(ua);
         _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        var ms = 2500;
+        if (int.TryParse(configuration["ZkillMinRequestIntervalMs"], out var parsed))
+            ms = parsed;
+        ms = Math.Clamp(ms, 250, 120_000);
+        _minIntervalBetweenRequests = TimeSpan.FromMilliseconds(ms);
+
+        _max429Attempts = 12;
+        if (int.TryParse(configuration["Zkill429MaxAttempts"], out var attempts))
+            _max429Attempts = Math.Clamp(attempts, 1, 30);
     }
 
     public async Task<ZkillStats?> GetCharacterStatsAsync(long characterId, CancellationToken cancellationToken = default)
     {
+        await _requestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             var url = $"https://zkillboard.com/api/stats/character/{characterId}/";
-            await using var stream = await _http.GetStreamAsync(url, cancellationToken).ConfigureAwait(false);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
-            var root = doc.RootElement;
 
-            var shipsDestroyed = ReadInt(root, "shipsDestroyed");
-            var shipsLost = ReadInt(root, "shipsLost");
-            var soloKills = ReadInt(root, "soloKills");
-            long iskDestroyed = 0, iskLost = 0;
-            if (root.TryGetProperty("iskDestroyed", out var idEl))
-                iskDestroyed = ReadLong(idEl);
-            if (root.TryGetProperty("iskLost", out var ilEl))
-                iskLost = ReadLong(ilEl);
-
-            var threat = ComputeThreat(shipsDestroyed, shipsLost, soloKills, iskDestroyed);
-            var buckets = BuildActivityBuckets(root, characterId, shipsDestroyed);
-
-            return new ZkillStats
+            for (var attempt = 0; attempt < _max429Attempts; attempt++)
             {
-                ShipsDestroyed = shipsDestroyed,
-                ShipsLost = shipsLost,
-                IskDestroyed = iskDestroyed,
-                IskLost = iskLost,
-                SoloKills = soloKills,
-                ThreatScore = threat.Score,
-                ThreatLabel = threat.Label,
-                ActivityBuckets = buckets
-            };
-        }
-        catch
-        {
+                var throttleWait = _earliestNextRequestUtc - DateTimeOffset.UtcNow;
+                if (throttleWait > TimeSpan.Zero)
+                    await Task.Delay(throttleWait, cancellationToken).ConfigureAwait(false);
+
+                using var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    var cooldown = ParseRetryAfter(response)
+                                   ?? TimeSpan.FromSeconds(Math.Min(90, 5 * (1 << Math.Min(attempt, 4))));
+                    if (cooldown < _minIntervalBetweenRequests)
+                        cooldown = _minIntervalBetweenRequests;
+                    _earliestNextRequestUtc = DateTimeOffset.UtcNow.Add(cooldown);
+                    continue;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _earliestNextRequestUtc = DateTimeOffset.UtcNow.Add(_minIntervalBetweenRequests);
+                    return null;
+                }
+
+                try
+                {
+                    await using var stream =
+                        await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+                    using var doc =
+                        await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    var root = doc.RootElement;
+
+                    var shipsDestroyed = ReadInt(root, "shipsDestroyed");
+                    var shipsLost = ReadInt(root, "shipsLost");
+                    var soloKills = ReadInt(root, "soloKills");
+                    long iskDestroyed = 0, iskLost = 0;
+                    if (root.TryGetProperty("iskDestroyed", out var idEl))
+                        iskDestroyed = ReadLong(idEl);
+                    if (root.TryGetProperty("iskLost", out var ilEl))
+                        iskLost = ReadLong(ilEl);
+
+                    var threat = ComputeThreat(shipsDestroyed, shipsLost, soloKills, iskDestroyed);
+                    var buckets = BuildActivityBuckets(root, characterId, shipsDestroyed);
+
+                    _earliestNextRequestUtc = DateTimeOffset.UtcNow.Add(_minIntervalBetweenRequests);
+                    return new ZkillStats
+                    {
+                        ShipsDestroyed = shipsDestroyed,
+                        ShipsLost = shipsLost,
+                        IskDestroyed = iskDestroyed,
+                        IskLost = iskLost,
+                        SoloKills = soloKills,
+                        ThreatScore = threat.Score,
+                        ThreatLabel = threat.Label,
+                        ActivityBuckets = buckets
+                    };
+                }
+                catch
+                {
+                    _earliestNextRequestUtc = DateTimeOffset.UtcNow.Add(_minIntervalBetweenRequests);
+                    return null;
+                }
+            }
+
+            _earliestNextRequestUtc = DateTimeOffset.UtcNow.Add(_minIntervalBetweenRequests);
             return null;
         }
+        finally
+        {
+            _requestGate.Release();
+        }
+    }
+
+    private static TimeSpan? ParseRetryAfter(HttpResponseMessage response)
+    {
+        var ra = response.Headers.RetryAfter;
+        if (ra?.Delta is { } d)
+            return d;
+        if (ra?.Date is { } resumeAt)
+        {
+            var wait = resumeAt - DateTimeOffset.UtcNow;
+            return wait > TimeSpan.Zero ? wait : TimeSpan.FromSeconds(10);
+        }
+
+        return null;
     }
 
     private static (int Score, string Label) ComputeThreat(int destroyed, int lost, int solo, long iskDestroyed)
@@ -127,5 +196,9 @@ public sealed class ZkillClient : IDisposable
         };
     }
 
-    public void Dispose() => _http.Dispose();
+    public void Dispose()
+    {
+        _requestGate.Dispose();
+        _http.Dispose();
+    }
 }

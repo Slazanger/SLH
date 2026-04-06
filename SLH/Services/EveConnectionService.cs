@@ -15,6 +15,9 @@ public sealed class EveConnectionService
 {
     private readonly IConfiguration _configuration;
     private readonly SecureSessionStore _sessionStore;
+
+    /// <summary>When set, cleared on <see cref="Logout"/> (contact standing cache).</summary>
+    public IContactStandingCache? ContactStandingCache { get; set; }
     private readonly TimeSpan _httpTimeout = TimeSpan.FromMinutes(2);
 
     private EVEStandardAPI? _api;
@@ -77,11 +80,15 @@ public sealed class EveConnectionService
 
         var state = CreateStateToken();
         var (verifier, challenge) = Pkce.CreateChallenge();
+        // Add matching scopes on https://developers.eveonline.com for this application.
         var scopes = new List<string>
         {
             Scopes.ESI_LOCATION_READ_LOCATION_1,
             Scopes.ESI_LOCATION_READ_ONLINE_1,
-            Scopes.ESI_LOCATION_READ_SHIP_TYPE_1
+            Scopes.ESI_LOCATION_READ_SHIP_TYPE_1,
+            Scopes.ESI_CHARACTERS_READ_CONTACTS_1,
+            Scopes.ESI_CORPORATIONS_READ_CONTACTS_1,
+            Scopes.ESI_ALLIANCE_READ_CONTACTS_1
         };
         var authUrl = _sso.AuthorizeToSSOPKCEUri(state, challenge, scopes);
 
@@ -133,6 +140,7 @@ public sealed class EveConnectionService
 
     public void Logout()
     {
+        ContactStandingCache?.Clear();
         _sessionStore.Clear();
         _access = null;
         _authDto = null;
@@ -184,7 +192,7 @@ public sealed class EveConnectionService
         stored.ScopesJoined = scopesJoined;
     }
 
-    private string BuildCallbackUri(int port) => $"http://127.0.0.1:{port}/callback/";
+    private string BuildCallbackUri(int port) => $"http://localhost:{port}/callback/";
 
     private static string CreateStateToken()
     {

@@ -9,7 +9,14 @@ namespace SLH.ViewModels;
 
 public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
 {
+    /// <summary>ESI POST /universe/names/ rejects oversized bodies; keep batches conservative.</summary>
+    private const int BulkNamesBatchSize = 500;
+
+    /// <summary>ESI POST /characters/affiliation/ accepts at most 1000 character IDs per call.</summary>
+    private const int AffiliationBatchSize = 1000;
+
     private readonly EveConnectionService _eve;
+    private readonly ContactStandingIndex _contactStandings;
     private readonly ISettingsStore _settings;
     private readonly HeaderState _header;
     private readonly ZkillClient _zkill;
@@ -28,17 +35,25 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
 
     public LocalAnalyserViewModel(
         EveConnectionService eve,
+        ContactStandingIndex contactStandings,
         ISettingsStore settings,
         HeaderState header,
         ZkillClient zkill,
         LocalChatLogWatcher watcher)
     {
         _eve = eve;
+        _contactStandings = contactStandings;
         _settings = settings;
         _header = header;
         _zkill = zkill;
         _watcher = watcher;
         _watcher.NewLines += OnLogLines;
+    }
+
+    public void ClearPilotStandingVisuals()
+    {
+        foreach (var row in _rows.Values)
+            row.ClearStandingVisual();
     }
 
     public void RefreshWatcherPath()
@@ -137,10 +152,14 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
             var pending = _rows.Values.Where(r => r.CharacterId is null or 0).Select(r => r.Name).Distinct().ToList();
             if (pending.Count > 0)
             {
-                var bulk = await _eve.Api.Universe.BulkNamesToIdsAsync(pending).WaitAsync(cancellationToken).ConfigureAwait(false);
-                var model = bulk.Model;
-                if (model?.Characters != null)
+                for (var offset = 0; offset < pending.Count; offset += BulkNamesBatchSize)
                 {
+                    var take = Math.Min(BulkNamesBatchSize, pending.Count - offset);
+                    var chunk = pending.GetRange(offset, take);
+                    var bulk = await _eve.Api.Universe.BulkNamesToIdsAsync(chunk).WaitAsync(cancellationToken).ConfigureAwait(false);
+                    var model = bulk.Model;
+                    if (model?.Characters == null)
+                        continue;
                     foreach (var c in model.Characters)
                     {
                         if (!_rows.TryGetValue(c.Name, out var row))
@@ -153,16 +172,27 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
 
             var ids = _rows.Values.Where(r => r.CharacterId is > 0).Select(r => r.CharacterId!.Value).Distinct().ToList();
             if (ids.Count == 0)
-                return;
-
-            var aff = await _eve.Api.Character.AffiliationAsync(ids).WaitAsync(cancellationToken).ConfigureAwait(false);
-            var affList = aff.Model;
-            var corpByChar = new Dictionary<long, long>();
-            if (affList != null)
             {
+                foreach (var row in _rows.Values)
+                    row.ClearStandingVisual();
+                return;
+            }
+
+            var corpByChar = new Dictionary<long, long>();
+            var allianceByChar = new Dictionary<long, long>();
+            for (var offset = 0; offset < ids.Count; offset += AffiliationBatchSize)
+            {
+                var take = Math.Min(AffiliationBatchSize, ids.Count - offset);
+                var chunk = ids.GetRange(offset, take);
+                var aff = await _eve.Api.Character.AffiliationAsync(chunk).WaitAsync(cancellationToken).ConfigureAwait(false);
+                var affList = aff.Model;
+                if (affList == null)
+                    continue;
                 foreach (var a in affList)
                 {
                     corpByChar[a.CharacterId] = a.CorporationId;
+                    if (a.AllianceId is { } aid && aid > 0)
+                        allianceByChar[a.CharacterId] = aid;
                 }
             }
 
@@ -195,6 +225,45 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                 }
                 else
                     row.Subtitle = row.Name;
+            }
+
+            if (_eve.IsAuthenticated)
+            {
+                try
+                {
+                    await _contactStandings.EnsureFreshAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch
+                {
+                    // ESI or token — fall back to neutral until next refresh
+                }
+
+                foreach (var row in _rows.Values)
+                {
+                    if (row.CharacterId is not { } charIdForStand)
+                    {
+                        row.ClearStandingVisual();
+                        continue;
+                    }
+
+                    if (!corpByChar.TryGetValue(charIdForStand, out var pilotCorpId))
+                    {
+                        row.ClearStandingVisual();
+                        continue;
+                    }
+
+                    long? pilotAlliance = allianceByChar.TryGetValue(charIdForStand, out var pa) ? pa : null;
+                    if (pilotAlliance is 0 or null)
+                        pilotAlliance = null;
+
+                    var effective = _contactStandings.GetEffectiveStanding(charIdForStand, pilotCorpId, pilotAlliance);
+                    row.ApplyStanding(effective);
+                }
+            }
+            else
+            {
+                foreach (var row in _rows.Values)
+                    row.ClearStandingVisual();
             }
 
             if (_settings.Load().EnableZkillIntel)
@@ -256,6 +325,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
 
         DetailNotes = string.Join(Environment.NewLine, new[]
         {
+            string.IsNullOrEmpty(value.StandingDisplay) ? null : $"Standing (contacts): {value.StandingDisplay}",
             $"Recent kills: {value.ShipsDestroyed} — Recent losses: {value.ShipsLost}",
             value.ShipsHint,
             value.IntelTip

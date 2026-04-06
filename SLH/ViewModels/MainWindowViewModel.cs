@@ -23,6 +23,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public MainWindowViewModel(
         EveConnectionService eve,
+        ContactStandingIndex contactStandings,
         ISettingsStore settings,
         HeaderState header,
         ZkillClient zkill,
@@ -34,10 +35,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _logWatcher = logWatcher;
         Header = header;
 
-        Local = new LocalAnalyserViewModel(eve, settings, header, zkill, logWatcher);
+        Local = new LocalAnalyserViewModel(eve, contactStandings, settings, header, zkill, logWatcher);
         Dscan = new DscanViewModel();
         Lookup = new CharacterLookupViewModel(eve, zkill, settings);
-        Settings = new SettingsViewModel(settings, eve, OnSettingsSaved);
+        Settings = new SettingsViewModel(settings, eve, OnSettingsSaved, msg => Header.SystemLine = $"Login failed: {msg}");
 
         _locationTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(45) };
         _locationTimer.Tick += OnLocationTick;
@@ -73,32 +74,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         Header.PortraitUrl = _eve.PortraitUrl;
         Header.EsiConnected = _eve.IsAuthenticated;
         Local.RefreshWatcherPath();
+        if (!_eve.IsAuthenticated)
+            Local.ClearPilotStandingVisuals();
         Settings.Reload();
         _ = RefreshLocationAsync();
-    }
-
-    [RelayCommand]
-    private async Task LoginAsync(CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            await _eve.LoginWithBrowserAsync(cancellationToken).ConfigureAwait(false);
-            await Dispatcher.UIThread.InvokeAsync(async () =>
-            {
-                Header.CharacterDisplayName = _eve.CharacterName;
-                Header.PortraitUrl = _eve.PortraitUrl;
-                Header.EsiConnected = true;
-                Local.RefreshWatcherPath();
-                await RefreshLocationAsync();
-            });
-        }
-        catch (Exception ex)
-        {
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                Header.SystemLine = $"Login failed: {ex.Message}";
-            });
-        }
     }
 
     [RelayCommand]
