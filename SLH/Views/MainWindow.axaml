@@ -2,7 +2,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:SLH.ViewModels"
         xmlns:v="using:SLH.Views"
-        xmlns:c="using:SLH.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
@@ -14,57 +13,8 @@
         Width="820" Height="480"
         MinWidth="620" MinHeight="380">
 
-    <Window.Resources>
-        <c:BoolBrushConverter x:Key="EsiDotBrush">
-            <c:BoolBrushConverter.WhenTrue>
-                <SolidColorBrush Color="#00c8c8"/>
-            </c:BoolBrushConverter.WhenTrue>
-            <c:BoolBrushConverter.WhenFalse>
-                <SolidColorBrush Color="#3d4550"/>
-            </c:BoolBrushConverter.WhenFalse>
-        </c:BoolBrushConverter>
-        <c:BoolBrushConverter x:Key="OnlineDotBrush">
-            <c:BoolBrushConverter.WhenTrue>
-                <SolidColorBrush Color="#00c8c8"/>
-            </c:BoolBrushConverter.WhenTrue>
-            <c:BoolBrushConverter.WhenFalse>
-                <SolidColorBrush Color="#3d4550"/>
-            </c:BoolBrushConverter.WhenFalse>
-        </c:BoolBrushConverter>
-    </Window.Resources>
-
-    <Grid RowDefinitions="Auto,*" Margin="4">
-        <Border Grid.Row="0" Classes="glass" Margin="0,0,0,4" Padding="6,4">
-            <Grid ColumnDefinitions="Auto,*,Auto">
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <Border Width="32" Height="32" CornerRadius="0" Background="#0a0e14" BorderBrush="#2A4B7C" BorderThickness="1">
-                        <TextBlock Text="♦" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#6a8aaa"/>
-                    </Border>
-                    <StackPanel VerticalAlignment="Center" Spacing="0">
-                        <TextBlock Text="{Binding Header.CharacterDisplayName}" FontWeight="SemiBold" FontSize="11" Foreground="#e8eef4"/>
-                        <TextBlock Text="{Binding Header.SystemLine}" Opacity="0.85" FontSize="10"/>
-                        <TextBlock Text="{Binding Header.LocalLine}" Opacity="0.85" FontSize="10"/>
-                    </StackPanel>
-                </StackPanel>
-
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <StackPanel VerticalAlignment="Center" Spacing="0">
-                        <TextBlock Text="ESI" FontSize="9" Opacity="0.55" HorizontalAlignment="Center" Foreground="#8a9aaa"/>
-                        <TextBlock Text="●" FontSize="11" HorizontalAlignment="Center" LineHeight="12"
-                                   Foreground="{Binding Header.EsiConnected, Converter={StaticResource EsiDotBrush}}"/>
-                    </StackPanel>
-                    <StackPanel VerticalAlignment="Center" Spacing="0">
-                        <TextBlock Text="ONL" FontSize="9" Opacity="0.55" HorizontalAlignment="Center" Foreground="#8a9aaa"/>
-                        <TextBlock Text="●" FontSize="11" HorizontalAlignment="Center"
-                                   Foreground="{Binding Header.IntelConnected, Converter={StaticResource OnlineDotBrush}}"/>
-                    </StackPanel>
-                    <Button Content="↻" Command="{Binding RefreshNowCommand}" Padding="6,3" MinWidth="26" ToolTip.Tip="Refresh location"/>
-                    <Button Content="⚙" Command="{Binding OpenSettingsTabCommand}" Padding="6,3" MinWidth="26" ToolTip.Tip="Settings"/>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}" Padding="0">
+    <Grid Margin="4">
+        <TabControl SelectedIndex="{Binding SelectedTabIndex}" Padding="0">
             <TabItem Header="Local">
                 <v:LocalAnalyserView DataContext="{Binding Local}"/>
             </TabItem>
