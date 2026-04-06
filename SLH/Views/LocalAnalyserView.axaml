@@ -16,7 +16,7 @@
 
     <Grid ColumnDefinitions="*,248" Margin="0,2,0,0">
         <Grid Grid.Column="0" RowDefinitions="*" Margin="0,0,6,0">
-            <Border x:Name="LocalPilotsHost" Classes="glass" Padding="2" ToolTip.Tip="Right-click for Paste or Clear.">
+            <Border x:Name="LocalPilotsHost" Classes="glass" Padding="2" ToolTip.Tip="Ctrl+P or Ctrl+V: paste from clipboard. Right-click: Paste or Clear.">
                 <Grid>
                     <Image Source="avares://SLH/Assets/local-empty-duck.png"
                            Stretch="Uniform"
@@ -27,7 +27,7 @@
                     <ListBox x:Name="LocalPilotsList" ItemsSource="{Binding Pilots}" SelectedItem="{Binding SelectedPilot}"
                          Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                          DoubleTapped="OnLocalPilotsDoubleTapped"
-                         ToolTip.Tip="Double-click: open zKill (when character ID is resolved). Right-click: paste / clear.">
+                         ToolTip.Tip="Double-click: open zKill (when character ID is resolved). Ctrl+P / Ctrl+V: paste. Right-click: menu.">
                     <ListBox.Styles>
                         <Style Selector="ListBoxItem">
                             <Setter Property="Padding" Value="1,0"/>

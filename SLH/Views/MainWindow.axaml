@@ -5,20 +5,20 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        d:DesignWidth="820" d:DesignHeight="480"
+        d:DesignWidth="620" d:DesignHeight="480"
         x:Class="SLH.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/app.ico"
         Title="SLH - Not really little, more medium"
-        Width="820" Height="480"
+        Width="620" Height="480"
         MinWidth="620" MinHeight="380">
 
     <Grid Margin="4">
-        <TabControl SelectedIndex="{Binding SelectedTabIndex}" Padding="0">
+        <TabControl SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}" Padding="0">
             <TabItem Header="Local">
                 <v:LocalAnalyserView DataContext="{Binding Local}"/>
             </TabItem>
-            <TabItem Header="D-Scan">
+            <TabItem Header="D-Scan" IsVisible="false">
                 <v:DscanView DataContext="{Binding Dscan}"/>
             </TabItem>
             <TabItem Header="Character">

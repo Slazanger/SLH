@@ -33,7 +33,7 @@
                     </TextBlock>
 
                     <StackPanel Grid.Column="1" Grid.Row="4" Margin="0,6,0,0" Spacing="2" IsVisible="{Binding HasZkillDetail}">
-                        <TextBlock Text="zKill (characterID stats)" FontWeight="SemiBold" FontSize="10" Foreground="#00b8c8"/>
+
                         <TextBlock Text="{Binding ZkillRatiosLine}" TextWrapping="Wrap" Opacity="0.9" FontSize="10"/>
                         <TextBlock TextWrapping="Wrap" FontSize="10" Opacity="0.85">
                             <Run Text="Solo kills " Foreground="#8a9aaa"/><Run Text="{Binding ZkillSoloKills}"/>
@@ -46,7 +46,7 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Grid.Row="5" Margin="0,6,0,0" Spacing="4">
-                        <TextBlock Text="Activity heatmap (UTC, zKill activity)" FontSize="9" Opacity="0.55" Foreground="#8a9aaa"/>
+                        <TextBlock Text="Activity heatmap (EveTZ, zKill activity)" FontSize="9" Opacity="0.55" Foreground="#8a9aaa"/>
                         <TextBlock Text="{Binding ActivityHeatmapUtcLine}" FontSize="9" TextWrapping="Wrap" Opacity="0.9"/>
                         <ItemsControl ItemsSource="{Binding ActivityHeatmap}">
                             <ItemsControl.ItemsPanel>

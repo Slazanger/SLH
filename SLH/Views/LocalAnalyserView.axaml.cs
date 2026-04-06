@@ -1,8 +1,11 @@
+using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using SLH.ViewModels;
 
 namespace SLH.Views;
@@ -14,6 +17,57 @@ public partial class LocalAnalyserView : UserControl
         InitializeComponent();
         LocalPilotsHost.AddHandler(InputElement.PointerReleasedEvent, OnLocalPilotsHostPointerReleased,
             RoutingStrategies.Bubble, handledEventsToo: true);
+
+        // Bubble: keys from the focused ListBox / ListBoxItem bubble up through this UserControl.
+        // TabControl does not place tab content under TabItem in the visual tree, so TopLevel tunnel
+        // and TabItem ancestors are unreliable; TabControl.SelectedContent identifies the active tab.
+        AddHandler(InputElement.KeyDownEvent, OnPasteHotKeyBubble, RoutingStrategies.Bubble);
+
+        LocalPilotsHost.PointerPressed += OnLocalPilotsHostPointerPressed;
+    }
+
+    private void OnLocalPilotsHostPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.Handled)
+            return;
+        LocalPilotsList.Focus();
+    }
+
+    private void OnPasteHotKeyBubble(object? sender, KeyEventArgs e)
+    {
+        if (!IsThisLocalTabSelectedContent())
+            return;
+        if (!e.KeyModifiers.HasFlag(KeyModifiers.Control))
+            return;
+        if (!IsPasteLocalGesture(e))
+            return;
+
+        e.Handled = true;
+        _ = PasteLocalFromClipboardAsync();
+    }
+
+    private static bool IsPasteLocalGesture(KeyEventArgs e) =>
+        e.Key is Key.P or Key.V
+        || e.PhysicalKey is PhysicalKey.P or PhysicalKey.V;
+
+    /// <summary>True when this view is the tab control's selected content (tab content lives in a presenter, not under TabItem visually).</summary>
+    private bool IsThisLocalTabSelectedContent()
+    {
+        foreach (var a in this.GetVisualAncestors())
+        {
+            if (a is TabControl tc)
+                return ReferenceEquals(tc.SelectedContent, this);
+        }
+
+        return true;
+    }
+
+    private async Task PasteLocalFromClipboardAsync()
+    {
+        if (TopLevel.GetTopLevel(this) is not { } top || top.Clipboard is null || DataContext is not LocalAnalyserViewModel vm)
+            return;
+        var text = await top.Clipboard.TryGetTextAsync();
+        vm.ApplyLocalText(text);
     }
 
     private void OnLocalPilotsHostPointerReleased(object? sender, PointerReleasedEventArgs e)
