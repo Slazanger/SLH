@@ -31,14 +31,19 @@ public partial class PilotRowViewModel : ObservableObject
     [ObservableProperty] private string _standingForeground = EveStandingColors.DefaultText;
     [ObservableProperty] private string _standingDisplay = "";
 
+    /// <summary>Effective contact standing when resolved; null when unknown or not logged in.</summary>
+    public float? EffectiveStanding { get; private set; }
+
     public void ClearStandingVisual()
     {
+        EffectiveStanding = null;
         StandingForeground = EveStandingColors.DefaultText;
         StandingDisplay = "";
     }
 
     public void ApplyStanding(float effective)
     {
+        EffectiveStanding = effective;
         StandingForeground = EveStandingColors.ForegroundForStanding(effective);
         StandingDisplay = EveStandingColors.FormatStanding(effective);
     }

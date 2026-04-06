@@ -80,6 +80,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         Local.RefreshWatcherPath();
         if (!_eve.IsAuthenticated)
             Local.ClearPilotStandingVisuals();
+        else
+            Local.RebuildVisiblePilotsList();
         Settings.Reload();
         _ = RefreshLocationAsync();
     }

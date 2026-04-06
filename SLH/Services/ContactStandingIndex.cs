@@ -117,6 +117,22 @@ public sealed class ContactStandingIndex : IContactStandingCache
         }
     }
 
+    /// <summary>
+    /// Standing from a direct <b>character</b> contact only, plus +10 if this is the logged-in character.
+    /// Does not use corporation/alliance contacts (those need corp id from affiliation).
+    /// </summary>
+    public float GetQuickStandingForCharacter(long characterId)
+    {
+        const float sameCharStanding = 10f;
+        lock (_sync)
+        {
+            _byCharacter.TryGetValue(characterId, out var c);
+            if (_eve.CharacterId is { } me && characterId == me)
+                return Math.Max(c, sameCharStanding);
+            return c;
+        }
+    }
+
     public float GetEffectiveStanding(long characterId, long corporationId, long? allianceId)
     {
         const float sameOrgStanding = 10f;

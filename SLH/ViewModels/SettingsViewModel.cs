@@ -16,6 +16,7 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty] private string _chatLogsFolder = "";
     [ObservableProperty] private bool _enableZkillIntel = true;
+    [ObservableProperty] private bool _filterOutStandingPlus5Or10 = true;
 
     public SettingsViewModel(
         ISettingsStore settingsStore,
@@ -37,6 +38,7 @@ public partial class SettingsViewModel : ObservableObject
         var s = _settingsStore.Load();
         ChatLogsFolder = s.ChatLogsFolder;
         EnableZkillIntel = s.EnableZkillIntel;
+        FilterOutStandingPlus5Or10 = s.FilterOutStandingPlus5Or10 is not false;
     }
 
     [RelayCommand]
@@ -45,7 +47,8 @@ public partial class SettingsViewModel : ObservableObject
         _settingsStore.Save(new AppSettings
         {
             ChatLogsFolder = ChatLogsFolder.Trim(),
-            EnableZkillIntel = EnableZkillIntel
+            EnableZkillIntel = EnableZkillIntel,
+            FilterOutStandingPlus5Or10 = FilterOutStandingPlus5Or10
         });
         _onSaved();
     }

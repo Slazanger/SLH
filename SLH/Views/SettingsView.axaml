@@ -21,6 +21,7 @@
             </StackPanel>
 
             <CheckBox Content="zKill intel" IsChecked="{Binding EnableZkillIntel}"/>
+            <CheckBox Content="Hide +5 / +10 contacts from local list" IsChecked="{Binding FilterOutStandingPlus5Or10}"/>
 
             <StackPanel Spacing="4" Margin="0,10,0,0">
                 <TextBlock Text="Enrichment cache" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8"/>

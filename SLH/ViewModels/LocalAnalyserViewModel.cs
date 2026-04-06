@@ -23,6 +23,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
     private readonly EnrichmentDiskCache _diskCache;
     private readonly LocalChatLogWatcher _watcher;
     private readonly Dictionary<string, PilotRowViewModel> _rows = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<string> _pilotOrder = new();
     private readonly SemaphoreSlim _enrichGate = new(1, 1);
     private CancellationTokenSource? _enrichDebounce;
     private CancellationTokenSource? _selectionRefreshCts;
@@ -95,6 +96,88 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
     {
         foreach (var row in _rows.Values)
             row.ClearStandingVisual();
+        RebuildVisiblePilotsList();
+    }
+
+    /// <summary>Re-applies the +5/+10 hide filter after standings refresh or settings change.</summary>
+    public void RebuildVisiblePilotsList()
+    {
+        Pilots.Clear();
+        foreach (var name in _pilotOrder)
+        {
+            if (!_rows.TryGetValue(name, out var row))
+                continue;
+            if (ShouldHidePilot(row))
+                continue;
+            Pilots.Add(row);
+        }
+
+        if (SelectedPilot != null && !Pilots.Contains(SelectedPilot))
+            SelectedPilot = null;
+        UpdateHeaderCount();
+    }
+
+    private bool ShouldHidePilot(PilotRowViewModel row)
+    {
+        if (_settings.Load().FilterOutStandingPlus5Or10 is false)
+            return false;
+        return row.EffectiveStanding is >= 5f;
+    }
+
+    /// <summary>
+    /// When corporation id is unknown, only character-level contacts (+ logged-in self) apply.
+    /// When corp (and optional alliance) are known from in-memory maps or disk cache, full effective standing is used.
+    /// </summary>
+    private float ComputeEffectiveStandingForPilot(long characterId,
+        IReadOnlyDictionary<long, long>? corpByChar,
+        IReadOnlyDictionary<long, long>? allianceByChar)
+    {
+        long corpId = 0;
+        long? allianceId = null;
+
+        if (corpByChar != null && corpByChar.TryGetValue(characterId, out var c) && c > 0)
+        {
+            corpId = c;
+            if (allianceByChar != null && allianceByChar.TryGetValue(characterId, out var a) && a > 0)
+                allianceId = a;
+        }
+        else if (_diskCache.TryGetAffiliation(characterId, out var dc, out var dall) && dc > 0)
+        {
+            corpId = dc;
+            if (dall is { } da && da > 0)
+                allianceId = da;
+        }
+        else
+            return _contactStandings.GetQuickStandingForCharacter(characterId);
+
+        long? al = allianceId is 0 or null ? null : allianceId;
+        return _contactStandings.GetEffectiveStanding(characterId, corpId, al);
+    }
+
+    private void ApplyStandingsForAllPilotsWithIds(IReadOnlyDictionary<long, long>? corpByChar,
+        IReadOnlyDictionary<long, long>? allianceByChar)
+    {
+        if (_eve.IsAuthenticated)
+        {
+            foreach (var row in _rows.Values)
+            {
+                if (row.CharacterId is not { } id)
+                    continue;
+                row.ApplyStanding(ComputeEffectiveStandingForPilot(id, corpByChar, allianceByChar));
+            }
+        }
+        else
+        {
+            foreach (var row in _rows.Values)
+                row.ClearStandingVisual();
+        }
+    }
+
+    private void ReapplyStandingsForAllPilotsWithIdsAndRebuild(IReadOnlyDictionary<long, long>? corpByChar,
+        IReadOnlyDictionary<long, long>? allianceByChar)
+    {
+        ApplyStandingsForAllPilotsWithIds(corpByChar, allianceByChar);
+        RebuildVisiblePilotsList();
     }
 
     public void RefreshWatcherPath()
@@ -109,14 +192,15 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
     {
         foreach (var name in LocalChatParser.ParseNameList(text ?? ""))
             AddOrKeepPilot(name);
-        ScheduleEnrich();
-        UpdateHeaderCount();
+        TryApplyDiskCacheStandingsAndRebuild();
+        ScheduleEnrich(debounceMs: 0);
     }
 
     [RelayCommand]
     private void ClearLocal()
     {
         _rows.Clear();
+        _pilotOrder.Clear();
         Pilots.Clear();
         SelectedPilot = null;
         UpdateHeaderCount();
@@ -140,9 +224,64 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                     RemovePilot(name);
             }
 
+            TryApplyDiskCacheStandingsAndRebuild();
             ScheduleEnrich();
-            UpdateHeaderCount();
         });
+    }
+
+    /// <summary>
+    /// Uses on-disk character/affiliation/corp cache and in-memory contact standings (no ESI) so +5/+10 filtering
+    /// can apply immediately after paste or log lines, before the debounced full enrich run.
+    /// </summary>
+    private void TryApplyDiskCacheStandingsAndRebuild()
+    {
+        try
+        {
+            _eve.InitializeApi();
+
+            foreach (var row in _rows.Values)
+            {
+                if (row.CharacterId is > 0)
+                    continue;
+                if (!_diskCache.TryGetCharacterId(row.Name, out var cachedId))
+                    continue;
+                row.CharacterId = cachedId;
+                row.PortraitUrl = $"https://images.evetech.net/characters/{cachedId}/portrait?tenant=tranquility&size=64";
+            }
+
+            var ids = _rows.Values.Where(r => r.CharacterId is > 0).Select(r => r.CharacterId!.Value).Distinct().ToList();
+            var corpByChar = new Dictionary<long, long>();
+            var allianceByChar = new Dictionary<long, long>();
+            foreach (var id in ids)
+            {
+                if (!_diskCache.TryGetAffiliation(id, out var cCorp, out var cAlliance))
+                    continue;
+                corpByChar[id] = cCorp;
+                if (cAlliance is { } ca && ca > 0)
+                    allianceByChar[id] = ca;
+            }
+
+            foreach (var row in _rows.Values)
+            {
+                if (row.CharacterId is not { } charId)
+                    continue;
+                if (!corpByChar.TryGetValue(charId, out var coid))
+                    continue;
+                if (_diskCache.TryGetCorporation(coid, out var tick, out _) && !string.IsNullOrWhiteSpace(tick))
+                {
+                    row.CorpTicker = tick;
+                    row.Subtitle = $"{row.Name} [{tick}]";
+                }
+            }
+
+            ApplyStandingsForAllPilotsWithIds(corpByChar, allianceByChar);
+        }
+        catch
+        {
+            // ESI init / disk — leave rows as-is
+        }
+
+        RebuildVisiblePilotsList();
     }
 
     private void AddOrKeepPilot(string name)
@@ -151,7 +290,9 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
             return;
         var row = new PilotRowViewModel { Name = name, Subtitle = name };
         _rows[name] = row;
-        Pilots.Add(row);
+        _pilotOrder.Add(name);
+        if (!ShouldHidePilot(row))
+            Pilots.Add(row);
     }
 
     private void RemovePilot(string name)
@@ -159,22 +300,26 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         if (!_rows.TryGetValue(name, out var row))
             return;
         _rows.Remove(name);
+        _pilotOrder.Remove(name);
         Pilots.Remove(row);
         if (SelectedPilot == row)
             SelectedPilot = null;
+        UpdateHeaderCount();
     }
 
-    private void ScheduleEnrich()
+    private void ScheduleEnrich(int debounceMs = 600)
     {
         _enrichDebounce?.Cancel();
         _enrichDebounce?.Dispose();
         _enrichDebounce = new CancellationTokenSource();
         var token = _enrichDebounce.Token;
+        debounceMs = Math.Clamp(debounceMs, 0, 60_000);
         _ = Task.Run(async () =>
         {
             try
             {
-                await Task.Delay(600, token).ConfigureAwait(false);
+                if (debounceMs > 0)
+                    await Task.Delay(debounceMs, token).ConfigureAwait(false);
                 await EnrichPendingAsync(token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
@@ -228,6 +373,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
             {
                 foreach (var row in _rows.Values)
                     row.ClearStandingVisual();
+                await Dispatcher.UIThread.InvokeAsync(RebuildVisiblePilotsList);
                 return;
             }
 
@@ -247,6 +393,21 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                     needAffiliation.Add(id);
                 }
             }
+
+            if (_eve.IsAuthenticated)
+            {
+                try
+                {
+                    await _contactStandings.EnsureFreshAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch
+                {
+                    // ESI or token — fall back until next refresh
+                }
+            }
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+                ReapplyStandingsForAllPilotsWithIdsAndRebuild(corpByChar, allianceByChar));
 
             for (var offset = 0; offset < needAffiliation.Count; offset += AffiliationBatchSize)
             {
@@ -305,50 +466,20 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                     row.Subtitle = row.Name;
             }
 
-            if (_eve.IsAuthenticated)
+            var zkillTargets = await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                try
-                {
-                    await _contactStandings.EnsureFreshAsync(cancellationToken).ConfigureAwait(false);
-                }
-                catch
-                {
-                    // ESI or token — fall back to neutral until next refresh
-                }
+                ReapplyStandingsForAllPilotsWithIdsAndRebuild(corpByChar, allianceByChar);
+                if (!_settings.Load().EnableZkillIntel)
+                    return (IReadOnlyList<PilotRowViewModel>)Array.Empty<PilotRowViewModel>();
+                return _rows.Values
+                    .Where(r => r.CharacterId is > 0 && !ShouldHidePilot(r))
+                    .ToList();
+            });
 
-                foreach (var row in _rows.Values)
-                {
-                    if (row.CharacterId is not { } charIdForStand)
-                    {
-                        row.ClearStandingVisual();
-                        continue;
-                    }
+            foreach (var row in zkillTargets)
+                await EnrichPilotAsync(row, cancellationToken).ConfigureAwait(false);
 
-                    if (!corpByChar.TryGetValue(charIdForStand, out var pilotCorpId))
-                    {
-                        row.ClearStandingVisual();
-                        continue;
-                    }
-
-                    long? pilotAlliance = allianceByChar.TryGetValue(charIdForStand, out var pa) ? pa : null;
-                    if (pilotAlliance is 0 or null)
-                        pilotAlliance = null;
-
-                    var effective = _contactStandings.GetEffectiveStanding(charIdForStand, pilotCorpId, pilotAlliance);
-                    row.ApplyStanding(effective);
-                }
-            }
-            else
-            {
-                foreach (var row in _rows.Values)
-                    row.ClearStandingVisual();
-            }
-
-            if (_settings.Load().EnableZkillIntel)
-            {
-                foreach (var row in _rows.Values.Where(r => r.CharacterId is > 0))
-                    await EnrichPilotAsync(row, cancellationToken).ConfigureAwait(false);
-            }
+            await Dispatcher.UIThread.InvokeAsync(RebuildVisiblePilotsList);
         }
         finally
         {
@@ -498,7 +629,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                 }
             }
 
-            if (needZkill)
+            if (needZkill && !ShouldHidePilot(row))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 _diskCache.InvalidateZkillStats(id.Value);
@@ -570,6 +701,9 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                 DetailNotes = "";
             }
         });
+
+        if (!cancellationToken.IsCancellationRequested)
+            await Dispatcher.UIThread.InvokeAsync(RebuildVisiblePilotsList);
     }
 
     public void Dispose()
