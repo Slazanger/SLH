@@ -1,8 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:sys="using:System"
-             xmlns:conv="using:Avalonia.Data.Converters"
-             xmlns:hexconv="using:SLH.Converters"
+             xmlns:avalconv="using:Avalonia.Data.Converters"
+             xmlns:slh="using:SLH.Converters"
              xmlns:vm="using:SLH.ViewModels"
              xmlns:services="using:SLH.Services"
              x:Class="SLH.Views.LocalAnalyserView"
@@ -23,7 +22,7 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:PilotRowViewModel">
                             <Border BorderThickness="3,0,0,0"
-                                    BorderBrush="{Binding StandingForeground, Converter={x:Static hexconv:HexColorToBrushConverter.Instance}}"
+                                    BorderBrush="{Binding StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
                                     Padding="2,0,0,0">
                             <Grid ColumnDefinitions="28,*,Auto,Auto" Margin="1,0">
                                 <Border Grid.Column="0" Width="24" Height="24" CornerRadius="0" Background="#0a0e14" BorderBrush="#2d3d50" BorderThickness="1" VerticalAlignment="Center">
@@ -31,7 +30,7 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" Margin="4,0" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Subtitle}" FontWeight="SemiBold" FontSize="11"
-                                               Foreground="{Binding StandingForeground, Converter={x:Static hexconv:HexColorToBrushConverter.Instance}}"/>
+                                               Foreground="{Binding StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
                                     <TextBlock Text="{Binding Name}" Opacity="0.55" FontSize="9"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
@@ -53,14 +52,14 @@
                 <StackPanel Spacing="4">
                     <TextBlock Text="Pilot" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8"/>
 
-                    <StackPanel IsVisible="{Binding SelectedPilot, Converter={x:Static conv:ObjectConverters.IsNotNull}}" Spacing="4">
+                    <StackPanel IsVisible="{Binding SelectedPilot, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}" Spacing="4">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Border Width="44" Height="44" CornerRadius="0" Background="#0a0e14" BorderBrush="#2A4B7C" BorderThickness="1">
                                 <TextBlock Text="♦" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Foreground="#5a7090"/>
                             </Border>
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="{Binding SelectedPilot.Subtitle}" FontWeight="SemiBold" FontSize="11" TextWrapping="Wrap"
-                                           Foreground="{Binding SelectedPilot.StandingForeground, Converter={x:Static hexconv:HexColorToBrushConverter.Instance}}"/>
+                                           Foreground="{Binding SelectedPilot.StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
                                 <Border Padding="4,2" Margin="0,3,0,0" HorizontalAlignment="Left" Background="#8B1538" BorderBrush="#D32F2F" BorderThickness="1">
                                     <TextBlock Foreground="#f0f4f8" FontWeight="SemiBold" FontSize="10">
                                         <Run Text="{Binding SelectedPilot.ThreatLabel}"/>
@@ -89,17 +88,21 @@
                             <TextBlock Text="{x:Static services:ZkillIntelHeuristics.Disclaimer}" TextWrapping="Wrap" FontSize="9" Opacity="0.55" FontStyle="Italic"/>
                         </StackPanel>
                         <TextBlock Text="{Binding SelectedPilot.ActivityRegion}" FontWeight="SemiBold" FontSize="10" Foreground="#00a8b8"/>
-                        <TextBlock Text="Activity (UTC, zKill)" Opacity="0.5" FontSize="9"/>
-                        <ItemsControl ItemsSource="{Binding SelectedPilot.ActivityBuckets}">
+                        <TextBlock Text="Activity heatmap (UTC, zKill activity)" Opacity="0.5" FontSize="9"/>
+                        <TextBlock Text="{Binding ActivityHeatmapUtcLine}" TextWrapping="Wrap" FontSize="9" Opacity="0.85"/>
+                        <ItemsControl ItemsSource="{Binding ActivityHeatmap}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <StackPanel Orientation="Horizontal" Spacing="1"/>
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="sys:Int32">
+                                <DataTemplate x:DataType="vm:ActivityHeatmapCellViewModel">
                                     <Border Width="6" MaxHeight="40" MinHeight="2" VerticalAlignment="Bottom"
-                                            Height="{Binding}" Background="#F57C00" CornerRadius="0"/>
+                                            Height="{Binding BarHeight}" Background="#F57C00" CornerRadius="0"
+                                            BorderThickness="1"
+                                            BorderBrush="{Binding IsCurrentUtcHour, Converter={x:Static slh:BoolBrushConverter.HeatmapCurrentHourOutline}}"
+                                            ToolTip.Tip="{Binding Tooltip}"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -109,7 +112,7 @@
                     </StackPanel>
 
                     <TextBlock Text="Select a pilot."
-                               IsVisible="{Binding SelectedPilot, Converter={x:Static conv:ObjectConverters.IsNull}}"
+                               IsVisible="{Binding SelectedPilot, Converter={x:Static avalconv:ObjectConverters.IsNull}}"
                                Opacity="0.5" FontSize="10"/>
                 </StackPanel>
             </ScrollViewer>

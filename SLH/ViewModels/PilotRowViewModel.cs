@@ -26,6 +26,8 @@ public partial class PilotRowViewModel : ObservableObject
     [ObservableProperty] private string _intelTip = "";
     [ObservableProperty] private bool _isFriendly;
     [ObservableProperty] private int[] _activityBuckets = new int[24];
+    /// <summary>UTC hour → kill count from zKill <c>activity</c> (summed across weekdays).</summary>
+    [ObservableProperty] private int[] _activityHourCounts = new int[24];
     [ObservableProperty] private string _standingForeground = EveStandingColors.DefaultText;
     [ObservableProperty] private string _standingDisplay = "";
 

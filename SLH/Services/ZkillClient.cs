@@ -24,7 +24,16 @@ public sealed class ZkillStats
 
     public int ThreatScore { get; init; }
     public string ThreatLabel { get; init; } = "LOW";
+    /// <summary>Bar heights (px) for the 24h strip, derived from <see cref="ActivityHourCounts"/>.</summary>
     public IReadOnlyList<int> ActivityBuckets { get; init; } = Array.Empty<int>();
+
+    /// <summary>
+    /// Per-hour UTC kill counts from zKill <c>activity</c> (summed across weekdays). Length 24 when present.
+    /// </summary>
+    public IReadOnlyList<int> ActivityHourCounts { get; init; } = Array.Empty<int>();
+
+    /// <summary>zKill <c>activity.max</c> (peak count in any single day/hour cell).</summary>
+    public int ActivityGridMax { get; init; }
 }
 
 public sealed class ZkillClient : IDisposable
@@ -115,7 +124,7 @@ public sealed class ZkillClient : IDisposable
                     var groupLosses = ParseGroupShipsLost(root);
 
                     var threat = ComputeThreat(shipsDestroyed, shipsLost, soloKills, iskDestroyed);
-                    var buckets = BuildActivityBuckets(root, characterId, shipsDestroyed);
+                    var (hourCounts, gridMax, buckets) = BuildActivityFromZkill(root);
 
                     _earliestNextRequestUtc = DateTimeOffset.UtcNow.Add(_minIntervalBetweenRequests);
                     var built = new ZkillStats
@@ -135,7 +144,9 @@ public sealed class ZkillClient : IDisposable
                             : FrozenDictionary<int, int>.Empty,
                         ThreatScore = threat.Score,
                         ThreatLabel = threat.Label,
-                        ActivityBuckets = buckets
+                        ActivityBuckets = buckets,
+                        ActivityHourCounts = hourCounts,
+                        ActivityGridMax = gridMax
                     };
                     _diskCache?.RememberZkillStats(characterId, built);
                     return built;
@@ -181,28 +192,56 @@ public sealed class ZkillClient : IDisposable
         return (score, label);
     }
 
-    private static int[] BuildActivityBuckets(JsonElement root, long characterId, int totalKills)
+    /// <summary>
+    /// Parses zKill <c>activity</c>: weekday index (0=Sun … 6=Sat) → hour (0–23 UTC) → kill count.
+    /// Aggregates to 24 hourly totals and scales bar heights for the UI.
+    /// </summary>
+    private static (int[] HourCounts, int GridMax, int[] BarHeights) BuildActivityFromZkill(JsonElement root)
     {
-        var buckets = new int[24];
-        if (root.TryGetProperty("months", out var months) && months.ValueKind == JsonValueKind.Object)
+        var hourly = new int[24];
+        var gridMax = 0;
+
+        if (root.TryGetProperty("activity", out var act) && act.ValueKind == JsonValueKind.Object)
         {
-            var values = new List<int>();
-            foreach (var p in months.EnumerateObject())
-                values.Add(ReadInt(p.Value));
-            values.Sort();
-            for (var i = 0; i < 24 && values.Count > 0; i++)
-                buckets[i] = values[Math.Min(i * values.Count / 24, values.Count - 1)];
+            gridMax = ReadInt(act, "max");
+            foreach (var dayProp in act.EnumerateObject())
+            {
+                if (string.Equals(dayProp.Name, "max", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(dayProp.Name, "days", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (dayProp.Value.ValueKind != JsonValueKind.Object)
+                    continue;
+                if (!int.TryParse(dayProp.Name, out var dayIdx) || dayIdx is < 0 or > 6)
+                    continue;
+
+                foreach (var hourProp in dayProp.Value.EnumerateObject())
+                {
+                    if (!int.TryParse(hourProp.Name, out var hour) || hour is < 0 or > 23)
+                        continue;
+                    hourly[hour] += ReadInt(hourProp.Value);
+                }
+            }
         }
 
-        if (totalKills <= 0 || buckets.Sum() == 0)
+        var peakHourly = 0;
+        for (var i = 0; i < 24; i++)
         {
-            var rng = new Random((int)(characterId % int.MaxValue) ^ unchecked((int)totalKills));
-            var baseH = Math.Max(4, Math.Min(80, totalKills > 0 ? 10 + totalKills / 5 : 8));
+            if (hourly[i] > peakHourly)
+                peakHourly = hourly[i];
+        }
+
+        var barHeights = new int[24];
+        if (peakHourly <= 0)
+        {
             for (var i = 0; i < 24; i++)
-                buckets[i] = rng.Next(baseH / 2, baseH + 20);
+                barHeights[i] = 4;
+            return (hourly, gridMax, barHeights);
         }
 
-        return buckets;
+        for (var i = 0; i < 24; i++)
+            barHeights[i] = Math.Max(2, (int)Math.Round(2 + hourly[i] / (double)peakHourly * 38));
+
+        return (hourly, gridMax, barHeights);
     }
 
     private static Dictionary<int, int> ParseGroupShipsLost(JsonElement root)

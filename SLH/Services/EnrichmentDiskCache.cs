@@ -411,6 +411,8 @@ public sealed class EnrichmentDiskCache : IDisposable
         public int ThreatScore { get; set; }
         public string ThreatLabel { get; set; } = "LOW";
         public int[]? ActivityBuckets { get; set; }
+        public int[]? ActivityHourCounts { get; set; }
+        public int ActivityGridMax { get; set; }
     }
 
     private static class ZkillStatsSerializer
@@ -440,7 +442,11 @@ public sealed class EnrichmentDiskCache : IDisposable
                 GroupShipsLost = groups,
                 ThreatScore = s.ThreatScore,
                 ThreatLabel = s.ThreatLabel,
-                ActivityBuckets = s.ActivityBuckets is int[] arr ? (int[])arr.Clone() : s.ActivityBuckets.ToArray()
+                ActivityBuckets = s.ActivityBuckets is int[] arr ? (int[])arr.Clone() : s.ActivityBuckets.ToArray(),
+                ActivityHourCounts = s.ActivityHourCounts.Count >= 24
+                    ? s.ActivityHourCounts.Take(24).ToArray()
+                    : null,
+                ActivityGridMax = s.ActivityGridMax
             };
         }
 
@@ -454,6 +460,10 @@ public sealed class EnrichmentDiskCache : IDisposable
 
             var buckets = d.ActivityBuckets is { Length: 24 }
                 ? (int[])d.ActivityBuckets.Clone()
+                : new int[24];
+
+            var hourCounts = d.ActivityHourCounts is { Length: 24 }
+                ? (int[])d.ActivityHourCounts.Clone()
                 : new int[24];
 
             return new ZkillStats
@@ -471,7 +481,9 @@ public sealed class EnrichmentDiskCache : IDisposable
                 GroupShipsLost = frozen,
                 ThreatScore = d.ThreatScore,
                 ThreatLabel = string.IsNullOrEmpty(d.ThreatLabel) ? "LOW" : d.ThreatLabel,
-                ActivityBuckets = buckets
+                ActivityBuckets = buckets,
+                ActivityHourCounts = hourCounts,
+                ActivityGridMax = d.ActivityGridMax
             };
         }
     }

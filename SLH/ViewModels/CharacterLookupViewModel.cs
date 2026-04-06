@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Net.Http;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -7,12 +8,15 @@ using SLH.Services;
 
 namespace SLH.ViewModels;
 
-public partial class CharacterLookupViewModel : ObservableObject
+public partial class CharacterLookupViewModel : ObservableObject, IDisposable
 {
     private readonly EveConnectionService _eve;
     private readonly ZkillClient _zkill;
     private readonly ISettingsStore _settings;
     private readonly EnrichmentDiskCache _diskCache;
+    private readonly DispatcherTimer _activityUtcTimer;
+
+    public ObservableCollection<ActivityHeatmapCellViewModel> ActivityHeatmap { get; } = new();
 
     [ObservableProperty] private string _searchName = "";
     [ObservableProperty] private string _status = "";
@@ -31,6 +35,8 @@ public partial class CharacterLookupViewModel : ObservableObject
     [ObservableProperty] private int _threatScore;
     [ObservableProperty] private string _threatLabel = "";
     [ObservableProperty] private int[] _activityBuckets = new int[24];
+    [ObservableProperty] private int[] _activityHourCounts = new int[24];
+    [ObservableProperty] private string _activityHeatmapUtcLine = "";
     [ObservableProperty] private Bitmap? _portraitBitmap;
 
     public bool ShowStatus => !string.IsNullOrWhiteSpace(Status);
@@ -51,6 +57,42 @@ public partial class CharacterLookupViewModel : ObservableObject
         _zkill = zkill;
         _settings = settings;
         _diskCache = diskCache;
+
+        _activityUtcTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        _activityUtcTimer.Tick += OnActivityUtcTick;
+    }
+
+    private void OnActivityUtcTick(object? sender, EventArgs e)
+    {
+        if (HasResult)
+            RebuildActivityHeatmap();
+    }
+
+    private void RebuildActivityHeatmap()
+    {
+        if (!HasResult)
+        {
+            ActivityHeatmap.Clear();
+            ActivityHeatmapUtcLine = "";
+            return;
+        }
+
+        if (ActivityHourCounts is not { Length: 24 } || ActivityBuckets is not { Length: 24 })
+        {
+            ActivityHeatmap.Clear();
+            ActivityHeatmapUtcLine = "";
+            return;
+        }
+
+        var utc = DateTime.UtcNow;
+        ActivityHeatmapPresenter.Rebuild(ActivityHeatmap, ActivityHourCounts, ActivityBuckets, utc);
+        ActivityHeatmapUtcLine = ActivityHeatmapPresenter.BuildUtcLine(ActivityHourCounts, utc);
+    }
+
+    public void Dispose()
+    {
+        _activityUtcTimer.Stop();
+        _activityUtcTimer.Tick -= OnActivityUtcTick;
     }
 
     partial void OnStatusChanged(string value) => OnPropertyChanged(nameof(ShowStatus));
@@ -84,6 +126,10 @@ public partial class CharacterLookupViewModel : ObservableObject
             ZkillPvpSummary = "";
             ZkillCynoHint = "";
             ActivityBuckets = new int[24];
+            ActivityHourCounts = new int[24];
+            ActivityHeatmap.Clear();
+            ActivityHeatmapUtcLine = "";
+            _activityUtcTimer.Stop();
             PortraitBitmap?.Dispose();
             PortraitBitmap = null;
         });
@@ -145,6 +191,7 @@ public partial class CharacterLookupViewModel : ObservableObject
             var zkillRatiosLine = "";
             var zkillPvpSummary = "";
             var zkillCynoHint = "";
+            var hourCounts = new int[24];
             if (_settings.Load().EnableZkillIntel)
             {
                 var stats = await _zkill.GetCharacterStatsAsync(resolvedId, cancellationToken).ConfigureAwait(false);
@@ -155,6 +202,8 @@ public partial class CharacterLookupViewModel : ObservableObject
                     threatScore = stats.ThreatScore;
                     threatLabel = stats.ThreatLabel;
                     buckets = stats.ActivityBuckets.ToArray();
+                    for (var i = 0; i < 24 && i < stats.ActivityHourCounts.Count; i++)
+                        hourCounts[i] = stats.ActivityHourCounts[i];
                     zkillSoloKills = stats.SoloKills;
                     zkillSoloLosses = stats.SoloLosses;
                     zkillRatiosLine = ZkillIntelHeuristics.BuildRatiosLine(stats);
@@ -198,9 +247,12 @@ public partial class CharacterLookupViewModel : ObservableObject
                 ThreatScore = threatScore;
                 ThreatLabel = threatLabel;
                 ActivityBuckets = buckets;
+                ActivityHourCounts = hourCounts;
                 PortraitBitmap?.Dispose();
                 PortraitBitmap = portrait;
                 Status = "";
+                RebuildActivityHeatmap();
+                _activityUtcTimer.Start();
             });
         }
         catch (Exception ex)

@@ -133,6 +133,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _locationTimer.Stop();
         _locationTimer.Tick -= OnLocationTick;
         Local.Dispose();
+        Lookup.Dispose();
         _enrichmentCache.Dispose();
         _zkill.Dispose();
     }

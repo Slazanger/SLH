@@ -31,8 +31,13 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<PilotRowViewModel> Pilots { get; } = new();
 
+    public ObservableCollection<ActivityHeatmapCellViewModel> ActivityHeatmap { get; } = new();
+
     [ObservableProperty] private PilotRowViewModel? _selectedPilot;
     [ObservableProperty] private string _detailNotes = "";
+    [ObservableProperty] private string _activityHeatmapUtcLine = "";
+
+    private readonly DispatcherTimer _activityUtcTimer;
 
     public LocalAnalyserViewModel(
         EveConnectionService eve,
@@ -51,6 +56,39 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         _diskCache = diskCache;
         _watcher = watcher;
         _watcher.NewLines += OnLogLines;
+
+        _activityUtcTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        _activityUtcTimer.Tick += OnActivityUtcTick;
+    }
+
+    private void OnActivityUtcTick(object? sender, EventArgs e)
+    {
+        if (SelectedPilot != null)
+            RebuildActivityHeatmap();
+    }
+
+    private void RebuildActivityHeatmap()
+    {
+        var row = SelectedPilot;
+        if (row == null)
+        {
+            ActivityHeatmap.Clear();
+            ActivityHeatmapUtcLine = "";
+            return;
+        }
+
+        var counts = row.ActivityHourCounts;
+        var bars = row.ActivityBuckets;
+        if (counts is not { Length: 24 } || bars is not { Length: 24 })
+        {
+            ActivityHeatmap.Clear();
+            ActivityHeatmapUtcLine = "";
+            return;
+        }
+
+        var utc = DateTime.UtcNow;
+        ActivityHeatmapPresenter.Rebuild(ActivityHeatmap, counts, bars, utc);
+        ActivityHeatmapUtcLine = ActivityHeatmapPresenter.BuildUtcLine(counts, utc);
     }
 
     public void ClearPilotStandingVisuals()
@@ -328,7 +366,12 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         var stats = await _zkill.GetCharacterStatsAsync(id, cancellationToken).ConfigureAwait(false);
         if (stats == null)
         {
-            await Dispatcher.UIThread.InvokeAsync(() => ClearZkillRowFields(row));
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                ClearZkillRowFields(row);
+                if (ReferenceEquals(SelectedPilot, row))
+                    RebuildActivityHeatmap();
+            });
             return;
         }
 
@@ -353,7 +396,18 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
             row.ZkillRatiosLine = ZkillIntelHeuristics.BuildRatiosLine(stats);
             row.ZkillPvpSummary = ZkillIntelHeuristics.BuildPvpSummary(stats);
             row.ZkillCynoHint = cyno ?? "";
+            row.ActivityHourCounts = CopyActivity24(stats.ActivityHourCounts);
+            if (ReferenceEquals(SelectedPilot, row))
+                RebuildActivityHeatmap();
         });
+    }
+
+    private static int[] CopyActivity24(IReadOnlyList<int> src)
+    {
+        var a = new int[24];
+        for (var i = 0; i < 24 && i < src.Count; i++)
+            a[i] = src[i];
+        return a;
     }
 
     private static void ClearZkillRowFields(PilotRowViewModel row)
@@ -367,6 +421,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         row.ActivityRegion = "";
         row.IntelTip = "";
         row.ActivityBuckets = new int[24];
+        row.ActivityHourCounts = new int[24];
         row.ShipsHint = "";
         row.ZkillSoloKills = 0;
         row.ZkillSoloLosses = 0;
@@ -392,6 +447,9 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
 
         if (value == null)
         {
+            _activityUtcTimer.Stop();
+            ActivityHeatmap.Clear();
+            ActivityHeatmapUtcLine = "";
             DetailNotes = "";
             return;
         }
@@ -399,6 +457,9 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         DetailNotes = string.IsNullOrWhiteSpace(value.StandingDisplay)
             ? ""
             : $"Standing (contacts): {value.StandingDisplay}";
+
+        RebuildActivityHeatmap();
+        _activityUtcTimer.Start();
 
         if (value.CharacterId is not > 0)
             return;
@@ -519,6 +580,8 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         _enrichDebounce?.Dispose();
         _selectionRefreshCts?.Cancel();
         _selectionRefreshCts?.Dispose();
+        _activityUtcTimer.Stop();
+        _activityUtcTimer.Tick -= OnActivityUtcTick;
         _enrichGate.Dispose();
     }
 }

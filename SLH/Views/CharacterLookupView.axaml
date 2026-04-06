@@ -1,8 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:sys="using:System"
              xmlns:vm="using:SLH.ViewModels"
              xmlns:services="using:SLH.Services"
+             xmlns:slh="using:SLH.Converters"
              x:Class="SLH.Views.CharacterLookupView"
              x:DataType="vm:CharacterLookupViewModel">
 
@@ -45,19 +45,26 @@
                         <TextBlock Text="{x:Static services:ZkillIntelHeuristics.Disclaimer}" TextWrapping="Wrap" FontSize="9" Opacity="0.55" FontStyle="Italic"/>
                     </StackPanel>
 
-                    <ItemsControl Grid.Column="1" Grid.Row="5" Margin="0,6,0,0" ItemsSource="{Binding ActivityBuckets}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" Spacing="1"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="sys:Int32">
-                                <Border Width="7" MaxHeight="44" MinHeight="2" VerticalAlignment="Bottom"
-                                        Height="{Binding}" Background="#00a0b0" CornerRadius="0"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <StackPanel Grid.Column="1" Grid.Row="5" Margin="0,6,0,0" Spacing="4">
+                        <TextBlock Text="Activity heatmap (UTC, zKill activity)" FontSize="9" Opacity="0.55" Foreground="#8a9aaa"/>
+                        <TextBlock Text="{Binding ActivityHeatmapUtcLine}" FontSize="9" TextWrapping="Wrap" Opacity="0.9"/>
+                        <ItemsControl ItemsSource="{Binding ActivityHeatmap}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="1"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ActivityHeatmapCellViewModel">
+                                    <Border Width="7" MaxHeight="44" MinHeight="2" VerticalAlignment="Bottom"
+                                            Height="{Binding BarHeight}" Background="#00a0b0" CornerRadius="0"
+                                            BorderThickness="1"
+                                            BorderBrush="{Binding IsCurrentUtcHour, Converter={x:Static slh:BoolBrushConverter.HeatmapCurrentHourOutline}}"
+                                            ToolTip.Tip="{Binding Tooltip}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
                 </Grid>
             </Border>
         </StackPanel>

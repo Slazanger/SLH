@@ -6,6 +6,13 @@ namespace SLH.Converters;
 
 public sealed class BoolBrushConverter : IValueConverter
 {
+    /// <summary>Highlight border for the current UTC hour column on the zKill activity strip.</summary>
+    public static readonly BoolBrushConverter HeatmapCurrentHourOutline = new()
+    {
+        WhenTrue = new SolidColorBrush(Color.Parse("#00E5FF")),
+        WhenFalse = Brushes.Transparent
+    };
+
     public IBrush WhenTrue { get; set; } = new SolidColorBrush(Color.Parse("#22c55e"));
     public IBrush WhenFalse { get; set; } = new SolidColorBrush(Color.Parse("#52525b"));
 
