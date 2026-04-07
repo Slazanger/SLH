@@ -48,7 +48,6 @@
                         <TextBlock Text="{Binding ZkillPvpSummary}" TextWrapping="Wrap" FontSize="10" Opacity="0.9"/>
                         <TextBlock Text="{Binding ZkillCynoHint}" TextWrapping="Wrap" FontSize="10" Foreground="#CE93D8" Opacity="0.95"
                                    IsVisible="{Binding HasZkillCynoHint}"/>
-                        <TextBlock Text="{x:Static services:ZkillIntelHeuristics.Disclaimer}" TextWrapping="Wrap" FontSize="9" Opacity="0.55" FontStyle="Italic"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Grid.Row="5" Margin="0,6,0,0" Spacing="4">

@@ -2,20 +2,17 @@ namespace SLH.Services;
 
 /// <summary>
 /// Tunable text hints from zKill stats. Ship group IDs are CCP SDE <c>invGroups</c>, verified against
-/// <see href="https://everef.net/groups/{id}">EVE Ref</see> (Hauler 28, Deep Space Transport 380,
-/// Blockade Runner 1202, Covert Ops 830, Expedition Frigate 1283).
+/// <see href="https://everef.net/groups/{id}">EVE Ref</see>.
+/// Cyno-related hulls counted for the fleet cyno loss pattern: Force Recon, stealth bombers, and Black Ops.
 /// </summary>
 public static class ZkillIntelHeuristics
 {
-    public const string Disclaimer = "Heuristic only — verify on zKill.";
 
-    private static readonly int[] CynoSupportHullGroupIds =
+    private static readonly int[] CynoPatternHullGroupIds =
     {
-        28, // Hauler
-        380, // Deep Space Transport
-        1202, // Blockade Runner
-        830, // Covert Ops
-        1283 // Expedition Frigate
+        833, // Force Recon Ship
+        834, // Stealth Bomber
+        898 // Black Ops
     };
 
     private const int MinEngagementsForStyle = 10;
@@ -58,24 +55,24 @@ public static class ZkillIntelHeuristics
         return $"{activity} · {style} PvP on zKill.";
     }
 
-    /// <summary>Returns null when the cyno/support signal should not be shown.</summary>
+    /// <summary>Returns null when the fleet cyno hull pattern signal should not be shown.</summary>
     public static string? BuildCynoHint(ZkillStats s)
     {
         if (s.ShipsLost < MinLossesForCyno)
             return null;
 
-        var supportLost = 0;
-        foreach (var gid in CynoSupportHullGroupIds)
+        var cynoHullLosses = 0;
+        foreach (var gid in CynoPatternHullGroupIds)
         {
             if (s.GroupShipsLost.TryGetValue(gid, out var lost))
-                supportLost += lost;
+                cynoHullLosses += lost;
         }
 
-        var share = supportLost / (double)Math.Max(1, s.ShipsLost);
+        var share = cynoHullLosses / (double)Math.Max(1, s.ShipsLost);
         if (share < CynoSupportLossShare || s.GangRatio < CynoGangRatioMin || s.SoloKills > CynoSoloKillsMax)
             return null;
 
         return
-            $"Possible fleet cyno / support-hull pattern (~{share * 100:0}% of losses in hauler/covert transport groups, high gang context).";
+            $"Possible fleet cyno pattern (~{share * 100:0}% of losses on Force Recon, stealth bombers, or Black Ops hulls, high gang context).";
     }
 }

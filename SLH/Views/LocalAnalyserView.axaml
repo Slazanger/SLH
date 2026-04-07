@@ -14,7 +14,12 @@
         </ContextMenu>
     </UserControl.Resources>
 
-    <Grid ColumnDefinitions="*,248" Margin="0,2,0,0">
+    <Grid Margin="0,2,0,0">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MinWidth="200"/>
+            <ColumnDefinition Width="4"/>
+            <ColumnDefinition Width="300" MinWidth="280"/>
+        </Grid.ColumnDefinitions>
         <Grid Grid.Column="0" RowDefinitions="*" Margin="0,0,6,0">
             <Border x:Name="LocalPilotsHost" Classes="glass" Padding="2" ToolTip.Tip="Ctrl+V or right-click Paste: replace local from clipboard. Ctrl+P: merge paste. Right-click: Clear.">
                 <Grid>
@@ -119,12 +124,14 @@
             </Border>
         </Grid>
 
-        <Border Grid.Column="1" Classes="glass" Padding="6">
-            <ScrollViewer>
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Pilot" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8"/>
+        <GridSplitter Grid.Column="1" Width="4" Background="#2d3d50" ResizeDirection="Columns"/>
 
-                    <StackPanel IsVisible="{Binding SelectedPilot, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}" Spacing="4">
+        <Border Grid.Column="2" Classes="glass" Padding="8">
+            <ScrollViewer Padding="0,0,0,8">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Pilot" FontWeight="SemiBold" FontSize="12" Foreground="#00b8c8"/>
+
+                    <StackPanel IsVisible="{Binding SelectedPilot, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}" Spacing="8">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Border Width="44" Height="44" CornerRadius="0" Background="#0a0e14" BorderBrush="#2A4B7C" BorderThickness="1" ClipToBounds="True"
                                     DataContext="{Binding SelectedPilot}">
@@ -136,27 +143,27 @@
                                 </Panel>
                             </Border>
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{Binding SelectedPilot.Name}" FontWeight="SemiBold" FontSize="11" TextWrapping="Wrap"
+                                <TextBlock Text="{Binding SelectedPilot.Name}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" LineHeight="16"
                                            Foreground="{Binding SelectedPilot.StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
-                                <StackPanel Margin="0,3,0,0" Spacing="1" IsVisible="{Binding SelectedPilot.HasCorpDetail}">
-                                    <TextBlock Text="Corporation" FontSize="9" Opacity="0.55"/>
-                                    <TextBlock Text="{Binding SelectedPilot.CorpDetailLine}" FontSize="10" TextWrapping="Wrap" Foreground="#8a9aaa"/>
+                                <StackPanel Margin="0,4,0,0" Spacing="2" IsVisible="{Binding SelectedPilot.HasCorpDetail}">
+                                    <TextBlock Text="Corporation" FontSize="10" Foreground="#8490a0"/>
+                                    <TextBlock Text="{Binding SelectedPilot.CorpDetailLine}" FontSize="11" TextWrapping="Wrap" LineHeight="15" Foreground="#9aa8b6"/>
                                 </StackPanel>
-                                <StackPanel Margin="0,2,0,0" Spacing="1" IsVisible="{Binding SelectedPilot.HasAllianceDetail}">
-                                    <TextBlock Text="Alliance" FontSize="9" Opacity="0.55"/>
-                                    <TextBlock Text="{Binding SelectedPilot.AllianceDetailLine}" FontSize="10" TextWrapping="Wrap" Foreground="#8a9aaa"/>
+                                <StackPanel Margin="0,3,0,0" Spacing="2" IsVisible="{Binding SelectedPilot.HasAllianceDetail}">
+                                    <TextBlock Text="Alliance" FontSize="10" Foreground="#8490a0"/>
+                                    <TextBlock Text="{Binding SelectedPilot.AllianceDetailLine}" FontSize="11" TextWrapping="Wrap" LineHeight="15" Foreground="#9aa8b6"/>
                                 </StackPanel>
-                                <Panel Margin="0,3,0,0" HorizontalAlignment="Left">
+                                <Panel Margin="0,4,0,0" HorizontalAlignment="Left">
                                     <Border Padding="6,3" BorderThickness="1" Background="#2a1f32" BorderBrush="#7B1FA2"
                                             IsVisible="{Binding SelectedPilot.ShowThreatPendingPlaceholder}">
-                                        <TextBlock Text="????" FontWeight="SemiBold" FontSize="10" Foreground="#CE93D8"
+                                        <TextBlock Text="????" FontWeight="SemiBold" FontSize="11" Foreground="#CE93D8"
                                                    ToolTip.Tip="zKill threat not loaded yet"/>
                                     </Border>
                                     <Border Padding="4,2" BorderThickness="1"
                                             Background="{Binding SelectedPilot.ThreatBadgeBackground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
                                             BorderBrush="{Binding SelectedPilot.ThreatBadgeBorderBrush, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
                                             IsVisible="{Binding SelectedPilot.ShowThreatBadgeValues}">
-                                        <TextBlock FontWeight="SemiBold" FontSize="10"
+                                        <TextBlock FontWeight="SemiBold" FontSize="11"
                                                    Foreground="{Binding SelectedPilot.ThreatForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}">
                                             <Run Text="{Binding SelectedPilot.ThreatLabel}"/>
                                             <Run Text=" "/>
@@ -167,35 +174,39 @@
                             </StackPanel>
                         </StackPanel>
 
-                        <TextBlock TextWrapping="Wrap" FontSize="10">
-                            <Run Text="Kills " Foreground="#8a9aaa"/><Run Text="{Binding SelectedPilot.ShipsDestroyed}"/>
-                            <Run Text="  Losses " Foreground="#8a9aaa"/><Run Text="{Binding SelectedPilot.ShipsLost}"/>
+                        <Border Height="1" Background="#2d3d50" Margin="0,2,0,0"/>
+
+                        <TextBlock TextWrapping="Wrap" FontSize="11" LineHeight="15">
+                            <Run Text="Kills " Foreground="#8a9aaa"/><Run Text="{Binding SelectedPilot.ShipsDestroyed}" Foreground="#c4ccd4"/>
+                            <Run Text="  Losses " Foreground="#8a9aaa"/><Run Text="{Binding SelectedPilot.ShipsLost}" Foreground="#c4ccd4"/>
                         </TextBlock>
-                        <TextBlock Text="{Binding SelectedPilot.ShipsHint}" TextWrapping="Wrap" Opacity="0.8" FontSize="10"/>
-                        <StackPanel Spacing="2" IsVisible="{Binding SelectedPilot.HasZkillDetail}">
-                            <TextBlock Text="zKill (characterID stats)" FontWeight="SemiBold" FontSize="10" Foreground="#00a8b8"/>
-                            <TextBlock Text="{Binding SelectedPilot.ZkillRatiosLine}" TextWrapping="Wrap" Opacity="0.9" FontSize="10"/>
-                            <TextBlock TextWrapping="Wrap" FontSize="10" Opacity="0.85">
+                        <TextBlock Text="{Binding SelectedPilot.ShipsHint}" TextWrapping="Wrap" FontSize="11" LineHeight="15" Foreground="#aab4be"/>
+
+                        <StackPanel Spacing="4" IsVisible="{Binding SelectedPilot.HasZkillDetail}">
+                            <TextBlock Text="{Binding SelectedPilot.ZkillRatiosLine}" TextWrapping="Wrap" FontSize="11" LineHeight="15" Foreground="#b4bcc6"/>
+                            <TextBlock TextWrapping="Wrap" FontSize="11" LineHeight="15" Foreground="#c4ccd4">
                                 <Run Text="Solo kills " Foreground="#8a9aaa"/><Run Text="{Binding SelectedPilot.ZkillSoloKills}"/>
                                 <Run Text="  Solo losses " Foreground="#8a9aaa"/><Run Text="{Binding SelectedPilot.ZkillSoloLosses}"/>
                             </TextBlock>
-                            <TextBlock Text="{Binding SelectedPilot.ZkillPvpSummary}" TextWrapping="Wrap" FontSize="10" Opacity="0.9"/>
-                            <TextBlock Text="{Binding SelectedPilot.ZkillCynoHint}" TextWrapping="Wrap" FontSize="10" Foreground="#CE93D8" Opacity="0.95"
+                            <TextBlock Text="{Binding SelectedPilot.ZkillPvpSummary}" TextWrapping="Wrap" FontSize="11" LineHeight="15" Foreground="#b4bcc6"/>
+                            <TextBlock Text="{Binding SelectedPilot.ZkillCynoHint}" TextWrapping="Wrap" FontSize="11" LineHeight="15" Foreground="#d4a5e8"
                                        IsVisible="{Binding SelectedPilot.HasZkillCynoHint}"/>
-                            <TextBlock Text="{x:Static services:ZkillIntelHeuristics.Disclaimer}" TextWrapping="Wrap" FontSize="9" Opacity="0.55" FontStyle="Italic"/>
                         </StackPanel>
-                        <TextBlock Text="{Binding SelectedPilot.ActivityRegion}" FontWeight="SemiBold" FontSize="10" Foreground="#00a8b8"/>
-                        <TextBlock Text="Activity heatmap (UTC, zKill activity)" Opacity="0.5" FontSize="9"/>
-                        <TextBlock Text="{Binding ActivityHeatmapUtcLine}" TextWrapping="Wrap" FontSize="9" Opacity="0.85"/>
+
+                        <Border Height="1" Background="#2d3d50" Margin="0,2,0,0"/>
+
+                        <TextBlock Text="{Binding SelectedPilot.ActivityRegion}" FontWeight="SemiBold" FontSize="11" Foreground="#00a8b8" Margin="0,2,0,0"/>
+                        <TextBlock Text="Activity heatmap (UTC, zKill activity)" FontSize="10" Foreground="#8490a0"/>
+                        <TextBlock Text="{Binding ActivityHeatmapUtcLine}" TextWrapping="Wrap" FontSize="10" LineHeight="14" Foreground="#a8b2bc"/>
                         <ItemsControl ItemsSource="{Binding ActivityHeatmap}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" Spacing="1"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="2"/>
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:ActivityHeatmapCellViewModel">
-                                    <Border Width="6" MaxHeight="40" MinHeight="2" VerticalAlignment="Bottom"
+                                    <Border Width="8" MaxHeight="40" MinHeight="2" VerticalAlignment="Bottom"
                                             Height="{Binding BarHeight}" Background="#F57C00" CornerRadius="0"
                                             BorderThickness="1"
                                             BorderBrush="{Binding IsCurrentUtcHour, Converter={x:Static slh:BoolBrushConverter.HeatmapCurrentHourOutline}}"
@@ -203,14 +214,17 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <TextBlock Text="Notes" FontWeight="SemiBold" FontSize="10" Foreground="#00b8c8"/>
-                        <TextBlock Text="{Binding DetailNotes}" TextWrapping="Wrap" Opacity="0.9" FontSize="10"/>
-                        <TextBlock Text="{Binding SelectedPilot.IntelTip}" TextWrapping="Wrap" FontStyle="Italic" Opacity="0.75" FontSize="10"/>
+
+                        <Border Height="1" Background="#2d3d50" Margin="0,2,0,0"/>
+
+                        <TextBlock Text="Notes" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8" Margin="0,2,0,0"/>
+                        <TextBlock Text="{Binding DetailNotes}" TextWrapping="Wrap" FontSize="11" LineHeight="15" Foreground="#b8c2cc"/>
+                        <TextBlock Text="{Binding SelectedPilot.IntelTip}" TextWrapping="Wrap" FontStyle="Italic" FontSize="11" LineHeight="15" Foreground="#9aa6b2"/>
                     </StackPanel>
 
                     <TextBlock Text="Select a pilot."
                                IsVisible="{Binding SelectedPilot, Converter={x:Static avalconv:ObjectConverters.IsNull}}"
-                               Opacity="0.5" FontSize="10"/>
+                               FontSize="11" Foreground="#8a96a4"/>
                 </StackPanel>
             </ScrollViewer>
         </Border>

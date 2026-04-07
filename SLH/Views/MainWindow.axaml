@@ -5,13 +5,13 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        d:DesignWidth="620" d:DesignHeight="480"
+        d:DesignWidth="680" d:DesignHeight="480"
         x:Class="SLH.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/app.ico"
-        Title="SLH - Not really little, more medium"
-        Width="620" Height="480"
-        MinWidth="620" MinHeight="380">
+        Title="SLH - Not really little, more medium [v0.1 2026-04-06]"
+        Width="680" Height="480"
+        MinWidth="680" MinHeight="380">
 
     <Grid Margin="4">
         <TabControl SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}" Padding="0">
