@@ -48,6 +48,11 @@ public partial class PilotRowViewModel : ObservableObject
     /// <summary>True while zKill intel is on and this row has not finished a threat fetch (success or failed).</summary>
     [ObservableProperty] private bool _showThreatPendingPlaceholder;
 
+    [ObservableProperty] private bool _tagFc;
+    [ObservableProperty] private bool _tagCloakyCamper;
+    [ObservableProperty] private bool _tagJfHunter;
+    [ObservableProperty] private bool _tagGanker;
+
     /// <summary>Effective contact standing when resolved; null when unknown or not logged in.</summary>
     public float? EffectiveStanding { get; private set; }
 
@@ -69,6 +74,34 @@ public partial class PilotRowViewModel : ObservableObject
     public bool HasStandingDisplay => !string.IsNullOrWhiteSpace(StandingDisplay);
 
     public double ListNameOpacity => CharacterId is > 0 ? 1.0 : 0.55;
+
+    public bool HasAnyCustomTag => TagFc || TagCloakyCamper || TagJfHunter || TagGanker;
+
+    /// <summary>Comma-separated tags for the detail panel (canonical order).</summary>
+    public string CustomTagsLine
+    {
+        get
+        {
+            var parts = new List<string>(4);
+            if (TagFc)
+                parts.Add(CharacterTagIds.Fc);
+            if (TagCloakyCamper)
+                parts.Add(CharacterTagIds.CloakyCamper);
+            if (TagJfHunter)
+                parts.Add(CharacterTagIds.JfHunter);
+            if (TagGanker)
+                parts.Add(CharacterTagIds.Ganker);
+            return string.Join(", ", parts);
+        }
+    }
+
+    public void SetCustomTags(IReadOnlySet<string> tags)
+    {
+        TagFc = tags.Contains(CharacterTagIds.Fc);
+        TagCloakyCamper = tags.Contains(CharacterTagIds.CloakyCamper);
+        TagJfHunter = tags.Contains(CharacterTagIds.JfHunter);
+        TagGanker = tags.Contains(CharacterTagIds.Ganker);
+    }
 
     public void ClearStandingVisual()
     {
@@ -152,6 +185,34 @@ public partial class PilotRowViewModel : ObservableObject
         RefreshRowTooltip();
     }
 
+    partial void OnTagFcChanged(bool value)
+    {
+        OnPropertyChanged(nameof(HasAnyCustomTag));
+        OnPropertyChanged(nameof(CustomTagsLine));
+        RefreshRowTooltip();
+    }
+
+    partial void OnTagCloakyCamperChanged(bool value)
+    {
+        OnPropertyChanged(nameof(HasAnyCustomTag));
+        OnPropertyChanged(nameof(CustomTagsLine));
+        RefreshRowTooltip();
+    }
+
+    partial void OnTagJfHunterChanged(bool value)
+    {
+        OnPropertyChanged(nameof(HasAnyCustomTag));
+        OnPropertyChanged(nameof(CustomTagsLine));
+        RefreshRowTooltip();
+    }
+
+    partial void OnTagGankerChanged(bool value)
+    {
+        OnPropertyChanged(nameof(HasAnyCustomTag));
+        OnPropertyChanged(nameof(CustomTagsLine));
+        RefreshRowTooltip();
+    }
+
     partial void OnCharacterIdChanged(long? value)
     {
         OnPropertyChanged(nameof(IsCharacterResolved));
@@ -212,7 +273,7 @@ public partial class PilotRowViewModel : ObservableObject
             await using var ms = new MemoryStream();
             await stream.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
             ms.Position = 0;
-            bitmap = await Task.Run(() => Bitmap.DecodeToWidth(ms, 32), cancellationToken).ConfigureAwait(false);
+            bitmap = await Task.Run(() => Bitmap.DecodeToWidth(ms, 40), cancellationToken).ConfigureAwait(false);
         }
         catch
         {
@@ -263,6 +324,8 @@ public partial class PilotRowViewModel : ObservableObject
             parts.Add($"Threat {ThreatLabel} ({ThreatScore})");
         if (HasZkillCynoHint)
             parts.Add("Cyno hint (zKill)");
+        if (HasAnyCustomTag)
+            parts.Add($"Tags: {CustomTagsLine}");
         RowTooltip = string.Join(Environment.NewLine, parts);
     }
 

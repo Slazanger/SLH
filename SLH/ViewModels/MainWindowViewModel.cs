@@ -11,6 +11,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly ISettingsStore _settings;
     private readonly ZkillClient _zkill;
     private readonly EnrichmentDiskCache _enrichmentCache;
+    private readonly CharacterTagStore _characterTags;
     private readonly LocalChatLogWatcher _logWatcher;
     private readonly DispatcherTimer _locationTimer;
 
@@ -29,16 +30,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         HeaderState header,
         ZkillClient zkill,
         EnrichmentDiskCache enrichmentCache,
+        CharacterTagStore characterTags,
         LocalChatLogWatcher logWatcher)
     {
         _eve = eve;
         _settings = settings;
         _zkill = zkill;
         _enrichmentCache = enrichmentCache;
+        _characterTags = characterTags;
         _logWatcher = logWatcher;
         Header = header;
 
-        Local = new LocalAnalyserViewModel(eve, contactStandings, settings, header, zkill, enrichmentCache, logWatcher);
+        Local = new LocalAnalyserViewModel(eve, contactStandings, settings, header, zkill, enrichmentCache, characterTags,
+            logWatcher);
         Dscan = new DscanViewModel();
         Lookup = new CharacterLookupViewModel(eve, zkill, settings, enrichmentCache);
         Settings = new SettingsViewModel(settings, eve, enrichmentCache, header, OnSettingsApplied,
@@ -139,6 +143,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         Local.Dispose();
         Lookup.Dispose();
         _enrichmentCache.Dispose();
+        _characterTags.Dispose();
         _zkill.Dispose();
     }
 }

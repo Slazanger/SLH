@@ -22,6 +22,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
     private readonly HeaderState _header;
     private readonly ZkillClient _zkill;
     private readonly EnrichmentDiskCache _diskCache;
+    private readonly CharacterTagStore _characterTags;
     private readonly LocalChatLogWatcher _watcher;
     private readonly Dictionary<string, PilotRowViewModel> _rows = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _pilotOrder = new();
@@ -49,6 +50,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         HeaderState header,
         ZkillClient zkill,
         EnrichmentDiskCache diskCache,
+        CharacterTagStore characterTags,
         LocalChatLogWatcher watcher)
     {
         _eve = eve;
@@ -57,6 +59,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         _header = header;
         _zkill = zkill;
         _diskCache = diskCache;
+        _characterTags = characterTags;
         _watcher = watcher;
         _watcher.NewLines += OnLogLines;
 
@@ -64,6 +67,32 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         _activityUtcTimer.Tick += OnActivityUtcTick;
 
         Pilots.CollectionChanged += OnPilotsCollectionChanged;
+    }
+
+    public void SyncPilotTagsFromStore(PilotRowViewModel row)
+    {
+        if (row.CharacterId is not { } id || id <= 0)
+        {
+            row.SetCustomTags(new HashSet<string>());
+            return;
+        }
+
+        row.SetCustomTags(_characterTags.GetTags(id));
+    }
+
+    public bool PilotHasTag(PilotRowViewModel? row, string tagId)
+    {
+        if (row?.CharacterId is not { } id || id <= 0 || !CharacterTagIds.IsKnown(tagId))
+            return false;
+        return _characterTags.HasTag(id, tagId);
+    }
+
+    public void SetPilotTag(PilotRowViewModel row, string tagId, bool enabled)
+    {
+        if (row.CharacterId is not { } id || id <= 0 || !CharacterTagIds.IsKnown(tagId))
+            return;
+        _characterTags.SetTag(id, tagId, enabled);
+        row.SetCustomTags(_characterTags.GetTags(id));
     }
 
     private void OnPilotsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
@@ -256,6 +285,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                     continue;
                 row.CharacterId = cachedId;
                 row.PortraitUrl = $"https://images.evetech.net/characters/{cachedId}/portrait?tenant=tranquility&size=64";
+                SyncPilotTagsFromStore(row);
             }
 
             var ids = _rows.Values.Where(r => r.CharacterId is > 0).Select(r => r.CharacterId!.Value).Distinct().ToList();
@@ -378,6 +408,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                     continue;
                 row.CharacterId = cachedId;
                 row.PortraitUrl = $"https://images.evetech.net/characters/{cachedId}/portrait?tenant=tranquility&size=64";
+                SyncPilotTagsFromStore(row);
             }
 
             var pending = _rows.Values.Where(r => r.CharacterId is null or 0).Select(r => r.Name).Distinct().ToList();
@@ -398,6 +429,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
                         row.CharacterId = c.Id;
                         row.PortraitUrl = $"https://images.evetech.net/characters/{c.Id}/portrait?tenant=tranquility&size=64";
                         _diskCache.RememberCharacterId(c.Name, c.Id);
+                        SyncPilotTagsFromStore(row);
                     }
                 }
             }

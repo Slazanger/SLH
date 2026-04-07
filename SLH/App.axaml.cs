@@ -36,10 +36,12 @@ public partial class App : Application
             eve.ContactStandingCache = contactStandings;
             var header = new HeaderState();
             var enrichmentCache = new EnrichmentDiskCache();
+            var characterTags = new CharacterTagStore();
             var zkill = new ZkillClient(configuration, enrichmentCache);
             var logWatcher = new LocalChatLogWatcher();
 
-            var mainVm = new MainWindowViewModel(eve, contactStandings, settingsStore, header, zkill, enrichmentCache, logWatcher);
+            var mainVm = new MainWindowViewModel(eve, contactStandings, settingsStore, header, zkill, enrichmentCache,
+                characterTags, logWatcher);
 
             var mainWindow = new MainWindow { DataContext = mainVm };
             mainWindow.Opened += async (_, _) => await mainVm.InitializeAsync();

@@ -11,6 +11,13 @@
         <ContextMenu x:Key="LocalPilotsContextMenu">
             <MenuItem Header="Paste" Click="OnPasteLocalClick"/>
             <MenuItem Header="Clear" Click="OnClearLocalClick"/>
+            <Separator/>
+            <MenuItem Header="Custom tag">
+                <MenuItem Header="FC" ToggleType="CheckBox" Click="OnCustomTagMenuItemClick"/>
+                <MenuItem Header="Cloaky Camper" ToggleType="CheckBox" Click="OnCustomTagMenuItemClick"/>
+                <MenuItem Header="JF Hunter" ToggleType="CheckBox" Click="OnCustomTagMenuItemClick"/>
+                <MenuItem Header="Ganker" ToggleType="CheckBox" Click="OnCustomTagMenuItemClick"/>
+            </MenuItem>
         </ContextMenu>
     </UserControl.Resources>
 
@@ -35,8 +42,8 @@
                          ToolTip.Tip="Double-click: open zKill (when character ID is resolved). Ctrl+V: replace paste. Ctrl+P: merge paste. Right-click: menu.">
                     <ListBox.Styles>
                         <Style Selector="ListBoxItem">
-                            <Setter Property="Padding" Value="1,0"/>
-                            <Setter Property="MinHeight" Value="22"/>
+                            <Setter Property="Padding" Value="2,2"/>
+                            <Setter Property="MinHeight" Value="28"/>
                         </Style>
                         <Style Selector="ListBoxItem:nth-child(odd) /template/ ContentPresenter">
                             <Setter Property="Background" Value="#0a1016"/>
@@ -44,74 +51,93 @@
                     </ListBox.Styles>
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:PilotRowViewModel">
-                            <Grid ColumnDefinitions="2,*" Margin="0">
-                            <Border Grid.Column="0" Width="2" VerticalAlignment="Stretch"
+                            <Grid ColumnDefinitions="3,*" Margin="0">
+                            <Border Grid.Column="0" Width="3" VerticalAlignment="Stretch"
                                     Background="{Binding StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}">
                                 <ToolTip.Tip>
                                     <TextBlock Text="{Binding RowTooltip}" TextWrapping="Wrap" MaxWidth="280" FontSize="11"/>
                                 </ToolTip.Tip>
                             </Border>
-                            <DockPanel Grid.Column="1" LastChildFill="True" Margin="1,0,0,0">
-                                <!-- Dock Right: first = outermost right (threat), then cyno, friendly, unresolved -->
-                                <Panel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="6,0,0,0">
+                            <DockPanel Grid.Column="1" LastChildFill="True" Margin="2,0,0,0">
+                                <!-- Dock Right: first = outermost right — tags + threat grouped on the right -->
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center"
+                                            Margin="8,0,0,0">
                                     <ToolTip.Tip>
                                         <TextBlock Text="{Binding RowTooltip}" TextWrapping="Wrap" MaxWidth="280" FontSize="11"/>
                                     </ToolTip.Tip>
-                                    <Border Padding="4,2" BorderThickness="1" Background="#2a1f32" BorderBrush="#7B1FA2"
-                                            IsVisible="{Binding ShowThreatPendingPlaceholder}">
-                                        <TextBlock Text="????" FontWeight="SemiBold" FontSize="8" Foreground="#CE93D8"
-                                                   ToolTip.Tip="zKill threat not loaded yet"/>
+                                    <Border Padding="4,1" CornerRadius="2" Background="#1a3a4a" BorderBrush="#2a5a6a"
+                                            BorderThickness="1" VerticalAlignment="Center" IsVisible="{Binding TagFc}">
+                                        <TextBlock Text="FC" FontSize="8" FontWeight="SemiBold" Foreground="#7ec8e8" VerticalAlignment="Center"/>
                                     </Border>
-                                    <Border Padding="3,1" BorderThickness="1"
-                                            Background="{Binding ThreatBadgeBackground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
-                                            BorderBrush="{Binding ThreatBadgeBorderBrush, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
-                                            IsVisible="{Binding ShowThreatBadgeValues}">
-                                        <StackPanel Orientation="Horizontal" Spacing="3">
-                                            <TextBlock Text="{Binding ThreatLabel}" FontWeight="SemiBold" FontSize="8"
-                                                       Foreground="{Binding ThreatForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
-                                            <TextBlock Text="{Binding ThreatScore}" FontWeight="SemiBold" FontSize="8" MinWidth="12"
-                                                       Foreground="{Binding ThreatForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
-                                        </StackPanel>
+                                    <Border Padding="4,1" CornerRadius="2" Background="#2a1f32" BorderBrush="#5a3a6a"
+                                            BorderThickness="1" VerticalAlignment="Center" IsVisible="{Binding TagCloakyCamper}">
+                                        <TextBlock Text="Cloaky" FontSize="8" FontWeight="SemiBold" Foreground="#CE93D8" VerticalAlignment="Center"/>
                                     </Border>
-                                </Panel>
-                                <Border DockPanel.Dock="Right" Background="Transparent" VerticalAlignment="Center" Margin="6,0,0,0"
+                                    <Border Padding="4,1" CornerRadius="2" Background="#2a2618" BorderBrush="#8D6E63"
+                                            BorderThickness="1" VerticalAlignment="Center" IsVisible="{Binding TagJfHunter}">
+                                        <TextBlock Text="JF" FontSize="8" FontWeight="SemiBold" Foreground="#FFCC80" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <Border Padding="4,1" CornerRadius="2" Background="#3a1a1a" BorderBrush="#c62828"
+                                            BorderThickness="1" VerticalAlignment="Center" IsVisible="{Binding TagGanker}">
+                                        <TextBlock Text="Gank" FontSize="8" FontWeight="SemiBold" Foreground="#ef9a9a" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <Panel VerticalAlignment="Center">
+                                        <Border Padding="5,3" BorderThickness="1" Background="#2a1f32" BorderBrush="#7B1FA2"
+                                                IsVisible="{Binding ShowThreatPendingPlaceholder}">
+                                            <TextBlock Text="????" FontWeight="SemiBold" FontSize="9" Foreground="#CE93D8"
+                                                       ToolTip.Tip="zKill threat not loaded yet"/>
+                                        </Border>
+                                        <Border Padding="4,2" BorderThickness="1"
+                                                Background="{Binding ThreatBadgeBackground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
+                                                BorderBrush="{Binding ThreatBadgeBorderBrush, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
+                                                IsVisible="{Binding ShowThreatBadgeValues}">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <TextBlock Text="{Binding ThreatLabel}" FontWeight="SemiBold" FontSize="9"
+                                                           Foreground="{Binding ThreatForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
+                                                <TextBlock Text="{Binding ThreatScore}" FontWeight="SemiBold" FontSize="9" MinWidth="14"
+                                                           Foreground="{Binding ThreatForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Panel>
+                                </StackPanel>
+                                <Border DockPanel.Dock="Right" Background="Transparent" VerticalAlignment="Center" Margin="8,0,0,0"
                                         IsVisible="{Binding HasZkillCynoHint}">
                                     <ToolTip.Tip>
                                         <TextBlock Text="{Binding RowTooltip}" TextWrapping="Wrap" MaxWidth="280" FontSize="11"/>
                                     </ToolTip.Tip>
-                                    <TextBlock Text="cyno" FontSize="7" Foreground="#CE93D8" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                    <TextBlock Text="cyno" FontSize="8" Foreground="#CE93D8" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                 </Border>
-                                <TextBlock DockPanel.Dock="Right" Text="✓" Foreground="#388E3C" FontSize="8" VerticalAlignment="Center"
-                                           Margin="6,0,0,0" IsVisible="{Binding IsFriendly}"/>
-                                <TextBlock DockPanel.Dock="Right" Text="?" FontSize="9" Foreground="#9a8a70" VerticalAlignment="Center" FontWeight="SemiBold"
-                                           Margin="6,0,0,0" ToolTip.Tip="Resolving character…"
+                                <TextBlock DockPanel.Dock="Right" Text="✓" Foreground="#388E3C" FontSize="9" VerticalAlignment="Center"
+                                           Margin="8,0,0,0" IsVisible="{Binding IsFriendly}"/>
+                                <TextBlock DockPanel.Dock="Right" Text="?" FontSize="10" Foreground="#9a8a70" VerticalAlignment="Center" FontWeight="SemiBold"
+                                           Margin="8,0,0,0" ToolTip.Tip="Resolving character…"
                                            IsVisible="{Binding IsCharacterUnresolved}"/>
 
-                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                    <Panel Width="16" Height="16" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                    <Panel Width="20" Height="20" VerticalAlignment="Center">
                                         <ToolTip.Tip>
                                             <TextBlock Text="{Binding RowTooltip}" TextWrapping="Wrap" MaxWidth="280" FontSize="11"/>
                                         </ToolTip.Tip>
-                                        <Border Width="16" Height="16" Background="#0a0e14" BorderBrush="#2d3d50" BorderThickness="1" ClipToBounds="True">
-                                            <Image Width="16" Height="16" Source="{Binding PortraitBitmap}" Stretch="UniformToFill"
+                                        <Border Width="20" Height="20" Background="#0a0e14" BorderBrush="#2d3d50" BorderThickness="1" ClipToBounds="True">
+                                            <Image Width="20" Height="20" Source="{Binding PortraitBitmap}" Stretch="UniformToFill"
                                                    IsVisible="{Binding PortraitBitmap, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}"/>
                                         </Border>
-                                        <TextBlock Text="♦" FontSize="8" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#5a7090"
+                                        <TextBlock Text="♦" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#5a7090"
                                                    IsVisible="{Binding PortraitBitmap, Converter={x:Static avalconv:ObjectConverters.IsNull}}"/>
                                     </Panel>
                                     <Border Background="Transparent" VerticalAlignment="Center" HorizontalAlignment="Left">
                                         <ToolTip.Tip>
                                             <TextBlock Text="{Binding RowTooltip}" TextWrapping="Wrap" MaxWidth="280" FontSize="11"/>
                                         </ToolTip.Tip>
-                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
                                             <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
-                                                       FontSize="11" LineHeight="13" TextTrimming="CharacterEllipsis"
+                                                       FontSize="12" LineHeight="15" TextTrimming="CharacterEllipsis"
                                                        Opacity="{Binding ListNameOpacity}"
                                                        Foreground="{Binding StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
                                             <TextBlock Text="{Binding CorpTicker, StringFormat='[{0}]'}" VerticalAlignment="Center"
-                                                       FontSize="9" Foreground="#8a9aaa" IsVisible="{Binding HasCorpTicker}"/>
+                                                       FontSize="10" Foreground="#8a9aaa" IsVisible="{Binding HasCorpTicker}"/>
                                             <TextBlock Text="{Binding AllianceTicker, StringFormat='[{0}]'}" VerticalAlignment="Center"
-                                                       FontSize="9" Foreground="#9aaa8a" IsVisible="{Binding HasAllianceTicker}"/>
+                                                       FontSize="10" Foreground="#9aaa8a" IsVisible="{Binding HasAllianceTicker}"/>
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
@@ -145,6 +171,11 @@
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="{Binding SelectedPilot.Name}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" LineHeight="16"
                                            Foreground="{Binding SelectedPilot.StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,3,0,0" IsVisible="{Binding SelectedPilot.HasAnyCustomTag}">
+                                    <TextBlock Text="Tags" FontSize="10" Foreground="#8490a0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding SelectedPilot.CustomTagsLine}" FontSize="10" Foreground="#9ec8d8" TextWrapping="Wrap"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
                                 <StackPanel Margin="0,4,0,0" Spacing="2" IsVisible="{Binding SelectedPilot.HasCorpDetail}">
                                     <TextBlock Text="Corporation" FontSize="10" Foreground="#8490a0"/>
                                     <TextBlock Text="{Binding SelectedPilot.CorpDetailLine}" FontSize="11" TextWrapping="Wrap" LineHeight="15" Foreground="#9aa8b6"/>
