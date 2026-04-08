@@ -9,7 +9,7 @@
         x:Class="SLH.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/app.ico"
-        Title="SLH - Not really little, more medium [v0.1 2026-04-06]"
+        Title="SLH - Not really little, more medium [v0.11 2026-04-08]"
         Width="680" Height="480"
         MinWidth="680" MinHeight="380">
 

@@ -472,6 +472,7 @@ public sealed class EnrichmentDiskCache : IDisposable
         public int[]? ActivityBuckets { get; set; }
         public int[]? ActivityHourCounts { get; set; }
         public int ActivityGridMax { get; set; }
+        public bool MonitorInTopShips { get; set; }
     }
 
     private static class ZkillStatsSerializer
@@ -505,7 +506,8 @@ public sealed class EnrichmentDiskCache : IDisposable
                 ActivityHourCounts = s.ActivityHourCounts.Count >= 24
                     ? s.ActivityHourCounts.Take(24).ToArray()
                     : null,
-                ActivityGridMax = s.ActivityGridMax
+                ActivityGridMax = s.ActivityGridMax,
+                MonitorInTopShips = s.MonitorInTopShips
             };
         }
 
@@ -542,7 +544,8 @@ public sealed class EnrichmentDiskCache : IDisposable
                 ThreatLabel = string.IsNullOrEmpty(d.ThreatLabel) ? "LOW" : d.ThreatLabel,
                 ActivityBuckets = buckets,
                 ActivityHourCounts = hourCounts,
-                ActivityGridMax = d.ActivityGridMax
+                ActivityGridMax = d.ActivityGridMax,
+                MonitorInTopShips = d.MonitorInTopShips
             };
         }
     }

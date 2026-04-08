@@ -34,6 +34,9 @@ public sealed class ZkillStats
 
     /// <summary>zKill <c>activity.max</c> (peak count in any single day/hour cell).</summary>
     public int ActivityGridMax { get; init; }
+
+    /// <summary>True when Monitor (ship type 45534) appears in a zKill <c>top*</c> ship list.</summary>
+    public bool MonitorInTopShips { get; init; }
 }
 
 public sealed class ZkillClient : IDisposable
@@ -125,6 +128,7 @@ public sealed class ZkillClient : IDisposable
 
                     var threat = ComputeThreat(shipsDestroyed, shipsLost, soloKills, iskDestroyed);
                     var (hourCounts, gridMax, buckets) = BuildActivityFromZkill(root);
+                    var monitorInTopShips = ParseMonitorInTopShips(root);
 
                     _earliestNextRequestUtc = DateTimeOffset.UtcNow.Add(_minIntervalBetweenRequests);
                     var built = new ZkillStats
@@ -146,7 +150,8 @@ public sealed class ZkillClient : IDisposable
                         ThreatLabel = threat.Label,
                         ActivityBuckets = buckets,
                         ActivityHourCounts = hourCounts,
-                        ActivityGridMax = gridMax
+                        ActivityGridMax = gridMax,
+                        MonitorInTopShips = monitorInTopShips
                     };
                     _diskCache?.RememberZkillStats(characterId, built);
                     return built;
@@ -249,6 +254,77 @@ public sealed class ZkillClient : IDisposable
             barHeights[i] = Math.Max(2, (int)Math.Round(2 + hourly[i] / (double)peakHourly * 38));
 
         return (hourly, gridMax, barHeights);
+    }
+
+    /// <summary>CONCORD Monitor (Flag Cruiser) — common FC hull on zKill top ship lists.</summary>
+    private const int MonitorShipTypeId = 45534;
+
+    private static bool ParseMonitorInTopShips(JsonElement root)
+    {
+        foreach (var prop in root.EnumerateObject())
+        {
+            if (!prop.Name.StartsWith("top", StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (prop.Value.ValueKind != JsonValueKind.Array)
+                continue;
+
+            foreach (var section in prop.Value.EnumerateArray())
+            {
+                if (section.ValueKind != JsonValueKind.Object)
+                    continue;
+                if (!section.TryGetProperty("type", out var typeEl) || typeEl.ValueKind != JsonValueKind.String)
+                    continue;
+                var t = typeEl.GetString();
+                if (t is null || !IsShipTopSectionType(t))
+                    continue;
+
+                if (TryGetTopShipRows(section, out var rows))
+                {
+                    foreach (var row in rows)
+                    {
+                        if (row.ValueKind != JsonValueKind.Object)
+                            continue;
+                        var typeId = ReadShipTypeIdFromTopRow(row);
+                        if (typeId == MonitorShipTypeId)
+                            return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsShipTopSectionType(string type) =>
+        type.Equals("ship", StringComparison.OrdinalIgnoreCase)
+        || type.Equals("shiptype", StringComparison.OrdinalIgnoreCase)
+        || type.Equals("shipType", StringComparison.OrdinalIgnoreCase);
+
+    private static bool TryGetTopShipRows(JsonElement section, out JsonElement.ArrayEnumerator rows)
+    {
+        if (section.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array)
+        {
+            rows = data.EnumerateArray();
+            return true;
+        }
+
+        if (section.TryGetProperty("values", out var values) && values.ValueKind == JsonValueKind.Array)
+        {
+            rows = values.EnumerateArray();
+            return true;
+        }
+
+        rows = default;
+        return false;
+    }
+
+    private static int ReadShipTypeIdFromTopRow(JsonElement row)
+    {
+        if (row.TryGetProperty("shipTypeID", out var st))
+            return ReadInt(st);
+        if (row.TryGetProperty("typeID", out var tid))
+            return ReadInt(tid);
+        return 0;
     }
 
     private static Dictionary<int, int> ParseGroupShipsLost(JsonElement root)

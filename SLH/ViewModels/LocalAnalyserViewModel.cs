@@ -642,6 +642,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
             row.ZkillRatiosLine = ZkillIntelHeuristics.BuildRatiosLine(stats);
             row.ZkillPvpSummary = ZkillIntelHeuristics.BuildPvpSummary(stats);
             row.ZkillCynoHint = cyno ?? "";
+            row.TagFcFromZkill = stats.MonitorInTopShips;
             row.ActivityHourCounts = CopyActivity24(stats.ActivityHourCounts);
             if (ReferenceEquals(SelectedPilot, row))
                 RebuildActivityHeatmap();
@@ -675,6 +676,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         row.ZkillRatiosLine = "";
         row.ZkillPvpSummary = "";
         row.ZkillCynoHint = "";
+        row.TagFcFromZkill = false;
     }
 
     private void UpdateHeaderCount()

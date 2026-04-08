@@ -49,6 +49,8 @@ public partial class PilotRowViewModel : ObservableObject
     [ObservableProperty] private bool _showThreatPendingPlaceholder;
 
     [ObservableProperty] private bool _tagFc;
+    /// <summary>FC suggested by zKill (Monitor in top ships); not persisted in <see cref="CharacterTagStore"/>.</summary>
+    [ObservableProperty] private bool _tagFcFromZkill;
     [ObservableProperty] private bool _tagCloakyCamper;
     [ObservableProperty] private bool _tagJfHunter;
     [ObservableProperty] private bool _tagGanker;
@@ -75,7 +77,10 @@ public partial class PilotRowViewModel : ObservableObject
 
     public double ListNameOpacity => CharacterId is > 0 ? 1.0 : 0.55;
 
-    public bool HasAnyCustomTag => TagFc || TagCloakyCamper || TagJfHunter || TagGanker;
+    public bool HasAnyCustomTag => TagFc || TagFcFromZkill || TagCloakyCamper || TagJfHunter || TagGanker;
+
+    /// <summary>FC badge: manual tag or zKill Monitor heuristic.</summary>
+    public bool ShowFcBadge => TagFc || TagFcFromZkill;
 
     /// <summary>Comma-separated tags for the detail panel (canonical order).</summary>
     public string CustomTagsLine
@@ -83,7 +88,7 @@ public partial class PilotRowViewModel : ObservableObject
         get
         {
             var parts = new List<string>(4);
-            if (TagFc)
+            if (TagFc || TagFcFromZkill)
                 parts.Add(CharacterTagIds.Fc);
             if (TagCloakyCamper)
                 parts.Add(CharacterTagIds.CloakyCamper);
@@ -187,6 +192,15 @@ public partial class PilotRowViewModel : ObservableObject
 
     partial void OnTagFcChanged(bool value)
     {
+        OnPropertyChanged(nameof(ShowFcBadge));
+        OnPropertyChanged(nameof(HasAnyCustomTag));
+        OnPropertyChanged(nameof(CustomTagsLine));
+        RefreshRowTooltip();
+    }
+
+    partial void OnTagFcFromZkillChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowFcBadge));
         OnPropertyChanged(nameof(HasAnyCustomTag));
         OnPropertyChanged(nameof(CustomTagsLine));
         RefreshRowTooltip();

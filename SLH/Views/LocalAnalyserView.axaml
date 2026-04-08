@@ -51,7 +51,7 @@
                     </ListBox.Styles>
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:PilotRowViewModel">
-                            <Grid ColumnDefinitions="3,*" Margin="0">
+                            <Grid ColumnDefinitions="3,*" Margin="0,0,15,0">
                             <Border Grid.Column="0" Width="3" VerticalAlignment="Stretch"
                                     Background="{Binding StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}">
                                 <ToolTip.Tip>
@@ -66,7 +66,7 @@
                                         <TextBlock Text="{Binding RowTooltip}" TextWrapping="Wrap" MaxWidth="280" FontSize="11"/>
                                     </ToolTip.Tip>
                                     <Border Padding="4,1" CornerRadius="2" Background="#1a3a4a" BorderBrush="#2a5a6a"
-                                            BorderThickness="1" VerticalAlignment="Center" IsVisible="{Binding TagFc}">
+                                            BorderThickness="1" VerticalAlignment="Center" IsVisible="{Binding ShowFcBadge}">
                                         <TextBlock Text="FC" FontSize="8" FontWeight="SemiBold" Foreground="#7ec8e8" VerticalAlignment="Center"/>
                                     </Border>
                                     <Border Padding="4,1" CornerRadius="2" Background="#2a1f32" BorderBrush="#5a3a6a"
@@ -107,8 +107,6 @@
                                     </ToolTip.Tip>
                                     <TextBlock Text="cyno" FontSize="8" Foreground="#CE93D8" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                 </Border>
-                                <TextBlock DockPanel.Dock="Right" Text="✓" Foreground="#388E3C" FontSize="9" VerticalAlignment="Center"
-                                           Margin="8,0,0,0" IsVisible="{Binding IsFriendly}"/>
                                 <TextBlock DockPanel.Dock="Right" Text="?" FontSize="10" Foreground="#9a8a70" VerticalAlignment="Center" FontWeight="SemiBold"
                                            Margin="8,0,0,0" ToolTip.Tip="Resolving character…"
                                            IsVisible="{Binding IsCharacterUnresolved}"/>
