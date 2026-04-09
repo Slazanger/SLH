@@ -3,7 +3,9 @@
              xmlns:dg="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.DataGrid"
              xmlns:vm="using:SLH.ViewModels"
              x:Class="SLH.Views.DscanView"
-             x:DataType="vm:DscanViewModel">
+             x:DataType="vm:DscanViewModel"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch">
 
     <UserControl.Styles>
         <Style Selector="dg|DataGrid">
@@ -34,15 +36,16 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid RowDefinitions="Auto,*" Margin="0,2,0,0">
+    <Grid RowDefinitions="Auto,*" Margin="0,2,0,0" MinHeight="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,4">
             <TextBlock Text="Paste D-scan (tabs from EVE)" Opacity="0.65" FontSize="10"/>
             <TextBox Text="{Binding PasteText}" AcceptsReturn="True" MinHeight="64" TextWrapping="Wrap"/>
             <Button Content="Analyze" Command="{Binding AnalyzeCommand}" HorizontalAlignment="Left"/>
         </StackPanel>
 
-        <Border Grid.Row="1" Classes="glass" Padding="2">
+        <Border Grid.Row="1" Classes="glass" Padding="2" MinHeight="0" VerticalAlignment="Stretch">
             <dg:DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True"
+                         HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                          GridLinesVisibility="Horizontal" HeadersVisibility="Column">
                 <dg:DataGrid.Columns>
                     <dg:DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>

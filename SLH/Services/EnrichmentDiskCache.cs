@@ -174,6 +174,9 @@ public sealed class EnrichmentDiskCache : IDisposable
         ScheduleSave();
     }
 
+    /// <summary>Bump when zKill disk payload shape changes so old files are not served (e.g. missing top-ship lists).</summary>
+    internal const int ZkillStatsDiskFormatVersion = 2;
+
     public bool TryGetZkillStats(long characterId, out ZkillStats? stats)
     {
         EnsureLoaded();
@@ -185,6 +188,8 @@ public sealed class EnrichmentDiskCache : IDisposable
             if (!_zkillByChar.TryGetValue(characterId, out var rec))
                 return false;
             if (DateTimeOffset.UtcNow - rec.CachedAt > ZkillTtl)
+                return false;
+            if (rec.Stats.FormatVersion < ZkillStatsDiskFormatVersion)
                 return false;
             stats = ZkillStatsSerializer.FromDto(rec.Stats);
             return stats != null;
@@ -456,6 +461,9 @@ public sealed class EnrichmentDiskCache : IDisposable
 
     private sealed class ZkillStatsDto
     {
+        /// <summary>Matches <see cref="EnrichmentDiskCache.ZkillStatsDiskFormatVersion"/> when this record is current.</summary>
+        public int FormatVersion { get; set; }
+
         public int ShipsDestroyed { get; set; }
         public int ShipsLost { get; set; }
         public long IskDestroyed { get; set; }
@@ -473,6 +481,8 @@ public sealed class EnrichmentDiskCache : IDisposable
         public int[]? ActivityHourCounts { get; set; }
         public int ActivityGridMax { get; set; }
         public bool MonitorInTopShips { get; set; }
+        public int[]? TopShipTypeIds { get; set; }
+        public int[]? TopShipKills { get; set; }
     }
 
     private static class ZkillStatsSerializer
@@ -489,6 +499,7 @@ public sealed class EnrichmentDiskCache : IDisposable
 
             return new ZkillStatsDto
             {
+                FormatVersion = ZkillStatsDiskFormatVersion,
                 ShipsDestroyed = s.ShipsDestroyed,
                 ShipsLost = s.ShipsLost,
                 IskDestroyed = s.IskDestroyed,
@@ -507,7 +518,9 @@ public sealed class EnrichmentDiskCache : IDisposable
                     ? s.ActivityHourCounts.Take(24).ToArray()
                     : null,
                 ActivityGridMax = s.ActivityGridMax,
-                MonitorInTopShips = s.MonitorInTopShips
+                MonitorInTopShips = s.MonitorInTopShips,
+                TopShipTypeIds = s.TopShipTypeIds.Count > 0 ? s.TopShipTypeIds.ToArray() : null,
+                TopShipKills = s.TopShipKills.Count > 0 ? s.TopShipKills.ToArray() : null
             };
         }
 
@@ -527,6 +540,15 @@ public sealed class EnrichmentDiskCache : IDisposable
                 ? (int[])d.ActivityHourCounts.Clone()
                 : new int[24];
 
+            var topIds = d.TopShipTypeIds is { Length: > 0 } tid ? (int[])tid.Clone() : Array.Empty<int>();
+            int[] topKills;
+            if (topIds.Length > 0 &&
+                d.TopShipKills is { Length: > 0 } tk &&
+                tk.Length == topIds.Length)
+                topKills = (int[])tk.Clone();
+            else
+                topKills = Array.Empty<int>();
+
             return new ZkillStats
             {
                 ShipsDestroyed = d.ShipsDestroyed,
@@ -545,7 +567,9 @@ public sealed class EnrichmentDiskCache : IDisposable
                 ActivityBuckets = buckets,
                 ActivityHourCounts = hourCounts,
                 ActivityGridMax = d.ActivityGridMax,
-                MonitorInTopShips = d.MonitorInTopShips
+                MonitorInTopShips = d.MonitorInTopShips,
+                TopShipTypeIds = topIds,
+                TopShipKills = topKills
             };
         }
     }

@@ -2,10 +2,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SLH.ViewModels"
              x:Class="SLH.Views.SettingsView"
-             x:DataType="vm:SettingsViewModel">
+             x:DataType="vm:SettingsViewModel"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch">
 
-    <ScrollViewer>
+    <ScrollViewer HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <StackPanel Spacing="8" Margin="0,2,0,0">
+
+
             <TextBlock Text="EVE / ESI" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8"/>
             <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="10"
                        Text="Client ID and callback port are compiled in (EsiBuildSettings.cs). Rebuild after changing them."/>
@@ -30,11 +34,24 @@
             <CheckBox Content="Hide +5 / +10 contacts from local list" IsChecked="{Binding FilterOutStandingPlus5Or10}"/>
 
             <StackPanel Spacing="4" Margin="0,10,0,0">
-                <TextBlock Text="Enrichment cache" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8"/>
+                <TextBlock Text="Cache" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8"/>
                 <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="10"
                            Text="Clears the on-disk cache (character names, corporations, affiliations, zKill snapshots). Next paste or lookup will refetch."/>
                 <Button Content="Clear enrichment cache" Command="{Binding ClearEnrichmentCacheCommand}" Padding="10,4"
                         HorizontalAlignment="Left"/>
+            </StackPanel>
+
+            <TextBlock Text="Appearance" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8"/>
+            <StackPanel Spacing="4">
+                <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="10"
+                           Text="Scales the whole main window content (tabs, lists, controls)."/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Slider Width="220" Minimum="0.75" Maximum="1.5" SmallChange="0.05" LargeChange="0.1"
+                            TickFrequency="0.05" IsSnapToTickEnabled="True"
+                            Value="{Binding UiScale}"/>
+                    <TextBlock VerticalAlignment="Center" FontSize="11" MinWidth="44"
+                               Text="{Binding UiScale, StringFormat={}{0:0%}}"/>
+                </StackPanel>
             </StackPanel>
 
             <TextBlock Text="Settings save automatically when you change them." Opacity="0.55" FontSize="9" Margin="0,6,0,0"/>

@@ -8,7 +8,17 @@ namespace SLH.ViewModels;
 
 public partial class PilotRowViewModel : ObservableObject
 {
+    private readonly ShipIconCache _shipIconCache;
+    private readonly ShipTypeNameCache _shipTypeNameCache;
     private CancellationTokenSource? _portraitLoadCts;
+    private CancellationTokenSource? _topShipIconsCts;
+    private int _topShipIconLoadGen;
+
+    public PilotRowViewModel(ShipIconCache shipIconCache, ShipTypeNameCache shipTypeNameCache)
+    {
+        _shipIconCache = shipIconCache;
+        _shipTypeNameCache = shipTypeNameCache;
+    }
 
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private long? _characterId;
@@ -54,6 +64,17 @@ public partial class PilotRowViewModel : ObservableObject
     [ObservableProperty] private bool _tagCloakyCamper;
     [ObservableProperty] private bool _tagJfHunter;
     [ObservableProperty] private bool _tagGanker;
+
+    [ObservableProperty] private Bitmap? _topShipBitmap1;
+    [ObservableProperty] private Bitmap? _topShipBitmap2;
+    [ObservableProperty] private Bitmap? _topShipBitmap3;
+    [ObservableProperty] private string _topShipTooltip1 = "";
+    [ObservableProperty] private string _topShipTooltip2 = "";
+    [ObservableProperty] private string _topShipTooltip3 = "";
+
+    /// <summary>True when any zKill top-hull icon is loaded (detail panel).</summary>
+    public bool HasTopShipDetail =>
+        TopShipBitmap1 != null || TopShipBitmap2 != null || TopShipBitmap3 != null;
 
     /// <summary>Effective contact standing when resolved; null when unknown or not logged in.</summary>
     public float? EffectiveStanding { get; private set; }
@@ -133,7 +154,163 @@ public partial class PilotRowViewModel : ObservableObject
             PortraitBitmap = null;
             b.Dispose();
         }
+
+        _topShipIconsCts?.Cancel();
+        _topShipIconsCts?.Dispose();
+        _topShipIconsCts = null;
+        _topShipIconLoadGen++;
+        ClearTopShipIconSlots();
     }
+
+    /// <summary>Loads top-hull icons from zKill type IDs (uses <see cref="ShipIconCache"/>).</summary>
+    public void ApplyTopShipsFromZkill(IReadOnlyList<int> typeIds, IReadOnlyList<int> kills)
+    {
+        _topShipIconsCts?.Cancel();
+        _topShipIconsCts?.Dispose();
+        _topShipIconsCts = null;
+        _topShipIconLoadGen++;
+        ClearTopShipIconSlots();
+
+        if (typeIds is not { Count: > 0 })
+            return;
+
+        var gen = _topShipIconLoadGen;
+        var cts = new CancellationTokenSource();
+        _topShipIconsCts = cts;
+        var ids = typeIds.Take(3).ToArray();
+        _ = LoadTopShipIconsAsync(ids, kills ?? Array.Empty<int>(), gen, cts.Token);
+    }
+
+    private void ClearTopShipIconSlots()
+    {
+        TopShipTooltip1 = "";
+        TopShipTooltip2 = "";
+        TopShipTooltip3 = "";
+        if (TopShipBitmap1 is { } a)
+        {
+            TopShipBitmap1 = null;
+            a.Dispose();
+        }
+
+        if (TopShipBitmap2 is { } b2)
+        {
+            TopShipBitmap2 = null;
+            b2.Dispose();
+        }
+
+        if (TopShipBitmap3 is { } b3)
+        {
+            TopShipBitmap3 = null;
+            b3.Dispose();
+        }
+    }
+
+    private async Task LoadTopShipIconsAsync(int[] typeIds, IReadOnlyList<int> kills, int gen, CancellationToken ct)
+    {
+        for (var slot = 0; slot < typeIds.Length && slot < 3; slot++)
+        {
+            var typeId = typeIds[slot];
+            if (typeId <= 0)
+                continue;
+
+            var killCount = kills.Count > slot ? kills[slot] : 0;
+
+            string? typeName;
+            byte[]? bytes;
+            try
+            {
+                var nameTask = _shipTypeNameCache.GetOrLoadAsync(typeId, ct);
+                var bytesTask = _shipIconCache.GetOrLoadBytesAsync(typeId, ct);
+                await Task.WhenAll(nameTask, bytesTask).ConfigureAwait(false);
+                typeName = await nameTask.ConfigureAwait(false);
+                bytes = await bytesTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            if (bytes == null || bytes.Length == 0)
+                continue;
+            if (ct.IsCancellationRequested || gen != _topShipIconLoadGen)
+                return;
+
+            var label = string.IsNullOrWhiteSpace(typeName) ? $"Type {typeId}" : typeName.Trim();
+            var tooltip = killCount > 0
+                ? $"{label} — {killCount} kills (zKill top hulls)"
+                : $"{label} (zKill top hulls)";
+
+            Bitmap? bitmap = null;
+            try
+            {
+                var copy = bytes.ToArray();
+                await using var ms = new MemoryStream(copy, writable: false);
+                bitmap = await Task.Run(() => Bitmap.DecodeToWidth(ms, 28), ct).ConfigureAwait(false);
+            }
+            catch
+            {
+                bitmap?.Dispose();
+                continue;
+            }
+
+            if (ct.IsCancellationRequested || gen != _topShipIconLoadGen)
+            {
+                bitmap.Dispose();
+                return;
+            }
+
+            var capturedSlot = slot;
+            var capturedTip = tooltip;
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (ct.IsCancellationRequested || gen != _topShipIconLoadGen)
+                {
+                    bitmap?.Dispose();
+                    return;
+                }
+
+                switch (capturedSlot)
+                {
+                    case 0:
+                        if (TopShipBitmap1 is { } o0)
+                        {
+                            TopShipBitmap1 = null;
+                            o0.Dispose();
+                        }
+
+                        TopShipTooltip1 = capturedTip;
+                        TopShipBitmap1 = bitmap;
+                        break;
+                    case 1:
+                        if (TopShipBitmap2 is { } o1)
+                        {
+                            TopShipBitmap2 = null;
+                            o1.Dispose();
+                        }
+
+                        TopShipTooltip2 = capturedTip;
+                        TopShipBitmap2 = bitmap;
+                        break;
+                    default:
+                        if (TopShipBitmap3 is { } o2)
+                        {
+                            TopShipBitmap3 = null;
+                            o2.Dispose();
+                        }
+
+                        TopShipTooltip3 = capturedTip;
+                        TopShipBitmap3 = bitmap;
+                        break;
+                }
+            });
+        }
+    }
+
+    partial void OnTopShipBitmap1Changed(Bitmap? value) => OnPropertyChanged(nameof(HasTopShipDetail));
+
+    partial void OnTopShipBitmap2Changed(Bitmap? value) => OnPropertyChanged(nameof(HasTopShipDetail));
+
+    partial void OnTopShipBitmap3Changed(Bitmap? value) => OnPropertyChanged(nameof(HasTopShipDetail));
 
     partial void OnNameChanged(string value) => RefreshRowTooltip();
 

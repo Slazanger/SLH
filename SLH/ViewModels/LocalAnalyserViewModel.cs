@@ -21,6 +21,8 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
     private readonly ISettingsStore _settings;
     private readonly HeaderState _header;
     private readonly ZkillClient _zkill;
+    private readonly ShipIconCache _shipIconCache;
+    private readonly ShipTypeNameCache _shipTypeNameCache;
     private readonly EnrichmentDiskCache _diskCache;
     private readonly CharacterTagStore _characterTags;
     private readonly LocalChatLogWatcher _watcher;
@@ -49,6 +51,8 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         ISettingsStore settings,
         HeaderState header,
         ZkillClient zkill,
+        ShipIconCache shipIconCache,
+        ShipTypeNameCache shipTypeNameCache,
         EnrichmentDiskCache diskCache,
         CharacterTagStore characterTags,
         LocalChatLogWatcher watcher)
@@ -58,6 +62,8 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         _settings = settings;
         _header = header;
         _zkill = zkill;
+        _shipIconCache = shipIconCache;
+        _shipTypeNameCache = shipTypeNameCache;
         _diskCache = diskCache;
         _characterTags = characterTags;
         _watcher = watcher;
@@ -340,7 +346,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
     {
         if (_rows.ContainsKey(name))
             return;
-        var row = new PilotRowViewModel { Name = name, Subtitle = name };
+        var row = new PilotRowViewModel(_shipIconCache, _shipTypeNameCache) { Name = name, Subtitle = name };
         row.ShowThreatPendingPlaceholder = _settings.Load().EnableZkillIntel;
         _rows[name] = row;
         _pilotOrder.Add(name);
@@ -644,6 +650,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
             row.ZkillCynoHint = cyno ?? "";
             row.TagFcFromZkill = stats.MonitorInTopShips;
             row.ActivityHourCounts = CopyActivity24(stats.ActivityHourCounts);
+            row.ApplyTopShipsFromZkill(stats.TopShipTypeIds, stats.TopShipKills);
             if (ReferenceEquals(SelectedPilot, row))
                 RebuildActivityHeatmap();
         });
@@ -677,6 +684,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         row.ZkillPvpSummary = "";
         row.ZkillCynoHint = "";
         row.TagFcFromZkill = false;
+        row.ApplyTopShipsFromZkill(Array.Empty<int>(), Array.Empty<int>());
     }
 
     private void UpdateHeaderCount()

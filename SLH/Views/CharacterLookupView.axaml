@@ -4,9 +4,11 @@
              xmlns:services="using:SLH.Services"
              xmlns:slh="using:SLH.Converters"
              x:Class="SLH.Views.CharacterLookupView"
-             x:DataType="vm:CharacterLookupViewModel">
+             x:DataType="vm:CharacterLookupViewModel"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch">
 
-    <ScrollViewer>
+    <ScrollViewer HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <StackPanel Spacing="6" Margin="0,2,0,0">
             <StackPanel Orientation="Horizontal" Spacing="4">
                 <TextBox Watermark="Character" Text="{Binding SearchName}" MinWidth="200"/>

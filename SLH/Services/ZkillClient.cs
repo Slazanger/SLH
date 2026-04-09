@@ -37,6 +37,12 @@ public sealed class ZkillStats
 
     /// <summary>True when Monitor (ship type 45534) appears in a zKill <c>top*</c> ship list.</summary>
     public bool MonitorInTopShips { get; init; }
+
+    /// <summary>Up to 3 distinct ship type IDs from zKill top ship lists, by descending <c>kills</c>.</summary>
+    public IReadOnlyList<int> TopShipTypeIds { get; init; } = Array.Empty<int>();
+
+    /// <summary>Parallel kill counts for <see cref="TopShipTypeIds"/> (same length when present).</summary>
+    public IReadOnlyList<int> TopShipKills { get; init; } = Array.Empty<int>();
 }
 
 public sealed class ZkillClient : IDisposable
@@ -129,6 +135,7 @@ public sealed class ZkillClient : IDisposable
                     var threat = ComputeThreat(shipsDestroyed, shipsLost, soloKills, iskDestroyed);
                     var (hourCounts, gridMax, buckets) = BuildActivityFromZkill(root);
                     var monitorInTopShips = ParseMonitorInTopShips(root);
+                    var (topShipTypeIds, topShipKills) = ParseTopShipTypeIds(root);
 
                     _earliestNextRequestUtc = DateTimeOffset.UtcNow.Add(_minIntervalBetweenRequests);
                     var built = new ZkillStats
@@ -151,7 +158,9 @@ public sealed class ZkillClient : IDisposable
                         ActivityBuckets = buckets,
                         ActivityHourCounts = hourCounts,
                         ActivityGridMax = gridMax,
-                        MonitorInTopShips = monitorInTopShips
+                        MonitorInTopShips = monitorInTopShips,
+                        TopShipTypeIds = topShipTypeIds,
+                        TopShipKills = topShipKills
                     };
                     _diskCache?.RememberZkillStats(characterId, built);
                     return built;
@@ -258,6 +267,82 @@ public sealed class ZkillClient : IDisposable
 
     /// <summary>CONCORD Monitor (Flag Cruiser) — common FC hull on zKill top ship lists.</summary>
     private const int MonitorShipTypeId = 45534;
+
+    private static (int[] TypeIds, int[] Kills) ParseTopShipTypeIds(JsonElement root)
+    {
+        var buf = new List<(int TypeId, int Kills)>(16);
+        if (root.TryGetProperty("topAllTime", out var topAllTime) && topAllTime.ValueKind == JsonValueKind.Array)
+        {
+            if (TryCollectShipRowsFromTopArray(topAllTime, buf))
+                return TakeTopThreeDistinctByKills(buf);
+        }
+
+        foreach (var prop in root.EnumerateObject())
+        {
+            if (!prop.Name.StartsWith("top", StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (prop.Name.Equals("topAllTime", StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (prop.Value.ValueKind != JsonValueKind.Array)
+                continue;
+            buf.Clear();
+            if (TryCollectShipRowsFromTopArray(prop.Value, buf))
+                return TakeTopThreeDistinctByKills(buf);
+        }
+
+        return (Array.Empty<int>(), Array.Empty<int>());
+    }
+
+    /// <summary>First ship section in the array only; fills <paramref name="buffer"/> (caller may clear).</summary>
+    private static bool TryCollectShipRowsFromTopArray(JsonElement topArray, List<(int TypeId, int Kills)> buffer)
+    {
+        foreach (var section in topArray.EnumerateArray())
+        {
+            if (section.ValueKind != JsonValueKind.Object)
+                continue;
+            if (!section.TryGetProperty("type", out var typeEl) || typeEl.ValueKind != JsonValueKind.String)
+                continue;
+            var t = typeEl.GetString();
+            if (t is null || !IsShipTopSectionType(t))
+                continue;
+            if (!TryGetTopShipRows(section, out var rows))
+                continue;
+
+            foreach (var row in rows)
+            {
+                if (row.ValueKind != JsonValueKind.Object)
+                    continue;
+                var typeId = ReadShipTypeIdFromTopRow(row);
+                var kills = ReadInt(row, "kills");
+                if (typeId > 0 && kills > 0)
+                    buffer.Add((typeId, kills));
+            }
+
+            if (buffer.Count > 0)
+                return true;
+        }
+
+        return false;
+    }
+
+    private static (int[] TypeIds, int[] Kills) TakeTopThreeDistinctByKills(List<(int TypeId, int Kills)> rows)
+    {
+        rows.Sort(static (a, b) => b.Kills.CompareTo(a.Kills));
+        var seen = new HashSet<int>();
+        var ids = new List<int>(3);
+        var kills = new List<int>(3);
+        foreach (var (typeId, k) in rows)
+        {
+            if (!seen.Add(typeId))
+                continue;
+            ids.Add(typeId);
+            kills.Add(k);
+            if (ids.Count >= 3)
+                break;
+        }
+
+        return (ids.ToArray(), kills.ToArray());
+    }
 
     private static bool ParseMonitorInTopShips(JsonElement root)
     {

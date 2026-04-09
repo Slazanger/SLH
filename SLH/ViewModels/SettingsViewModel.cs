@@ -17,10 +17,12 @@ public partial class SettingsViewModel : ObservableObject
     private readonly Action<string>? _onLoginFailed;
     private bool _suppressPersist;
     private readonly DispatcherTimer _folderPersistDebounce;
+    private readonly DispatcherTimer _uiScalePersistDebounce;
 
     [ObservableProperty] private string _chatLogsFolder = "";
     [ObservableProperty] private bool _enableZkillIntel = true;
     [ObservableProperty] private bool _filterOutStandingPlus5Or10 = true;
+    [ObservableProperty] private double _uiScale = 1.0;
     [ObservableProperty] private string _loggedInCharacterLine = "";
 
     public SettingsViewModel(
@@ -52,6 +54,14 @@ public partial class SettingsViewModel : ObservableObject
                 PersistToDisk(reloadSettingsView: false);
         };
 
+        _uiScalePersistDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
+        _uiScalePersistDebounce.Tick += (_, _) =>
+        {
+            _uiScalePersistDebounce.Stop();
+            if (!_suppressPersist)
+                PersistToDisk(reloadSettingsView: false);
+        };
+
         Reload();
     }
 
@@ -71,6 +81,7 @@ public partial class SettingsViewModel : ObservableObject
             ChatLogsFolder = s.ChatLogsFolder;
             EnableZkillIntel = s.EnableZkillIntel;
             FilterOutStandingPlus5Or10 = s.FilterOutStandingPlus5Or10 is not false;
+            UiScale = ClampUiScale(s.UiScale);
         }
         finally
         {
@@ -86,7 +97,8 @@ public partial class SettingsViewModel : ObservableObject
         {
             ChatLogsFolder = ChatLogsFolder.Trim(),
             EnableZkillIntel = EnableZkillIntel,
-            FilterOutStandingPlus5Or10 = FilterOutStandingPlus5Or10
+            FilterOutStandingPlus5Or10 = FilterOutStandingPlus5Or10,
+            UiScale = ClampUiScale(UiScale)
         });
         _onSettingsApplied(reloadSettingsView);
     }
@@ -112,6 +124,17 @@ public partial class SettingsViewModel : ObservableObject
             return;
         PersistToDisk(reloadSettingsView: false);
     }
+
+    partial void OnUiScaleChanged(double value)
+    {
+        if (_suppressPersist)
+            return;
+        _uiScalePersistDebounce.Stop();
+        _uiScalePersistDebounce.Start();
+    }
+
+    private static double ClampUiScale(double value) =>
+        Math.Clamp(value, AppSettings.UiScaleMin, AppSettings.UiScaleMax);
 
     [RelayCommand]
     private void Logout()

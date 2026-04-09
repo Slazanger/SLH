@@ -11,22 +11,37 @@
         Icon="/Assets/app.ico"
         Title="SLH - Not really little, more medium [v0.11 2026-04-08]"
         Width="680" Height="480"
-        MinWidth="680" MinHeight="380">
+        MinWidth="{Binding ScaledMinWidth}" MinHeight="{Binding ScaledMinHeight}">
 
-    <Grid Margin="4">
-        <TabControl SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}" Padding="0">
-            <TabItem Header="Local">
-                <v:LocalAnalyserView DataContext="{Binding Local}"/>
-            </TabItem>
-            <TabItem Header="D-Scan" IsVisible="false">
-                <v:DscanView DataContext="{Binding Dscan}"/>
-            </TabItem>
-            <TabItem Header="Character">
-                <v:CharacterLookupView DataContext="{Binding Lookup}"/>
-            </TabItem>
-            <TabItem Header="Settings">
-                <v:SettingsView DataContext="{Binding Settings}"/>
-            </TabItem>
-        </TabControl>
-    </Grid>
+    <!-- Render scale only: LayoutTransformControl mis-sizes / recenters after resize when scaled. -->
+    <Border Padding="4" Background="Transparent" ClipToBounds="True">
+        <Grid x:Name="ScaledHost"
+              HorizontalAlignment="Left"
+              VerticalAlignment="Top"
+              ClipToBounds="False"
+              RenderTransformOrigin="0,0">
+            <Grid.RenderTransform>
+                <ScaleTransform ScaleX="{Binding UiScale}" ScaleY="{Binding UiScale}"/>
+            </Grid.RenderTransform>
+            <TabControl SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}"
+                        Padding="0"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch">
+                <TabItem Header="Local" HorizontalContentAlignment="Stretch">
+                    <v:LocalAnalyserView DataContext="{Binding Local}"/>
+                </TabItem>
+                <TabItem Header="D-Scan" IsVisible="false" HorizontalContentAlignment="Stretch">
+                    <v:DscanView DataContext="{Binding Dscan}"/>
+                </TabItem>
+                <TabItem Header="Character" HorizontalContentAlignment="Stretch">
+                    <v:CharacterLookupView DataContext="{Binding Lookup}"/>
+                </TabItem>
+                <TabItem Header="Settings" HorizontalContentAlignment="Stretch">
+                    <v:SettingsView DataContext="{Binding Settings}"/>
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </Border>
 </Window>

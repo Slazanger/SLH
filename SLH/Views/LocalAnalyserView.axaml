@@ -5,7 +5,9 @@
              xmlns:vm="using:SLH.ViewModels"
              xmlns:services="using:SLH.Services"
              x:Class="SLH.Views.LocalAnalyserView"
-             x:DataType="vm:LocalAnalyserViewModel">
+             x:DataType="vm:LocalAnalyserViewModel"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch">
 
     <UserControl.Resources>
         <ContextMenu x:Key="LocalPilotsContextMenu">
@@ -21,15 +23,16 @@
         </ContextMenu>
     </UserControl.Resources>
 
-    <Grid Margin="0,2,0,0">
+    <Grid Margin="0,2,0,0" MinHeight="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" MinWidth="200"/>
             <ColumnDefinition Width="4"/>
             <ColumnDefinition Width="300" MinWidth="280"/>
         </Grid.ColumnDefinitions>
-        <Grid Grid.Column="0" RowDefinitions="*" Margin="0,0,6,0">
-            <Border x:Name="LocalPilotsHost" Classes="glass" Padding="2" ToolTip.Tip="Ctrl+V or right-click Paste: replace local from clipboard. Ctrl+P: merge paste. Right-click: Clear.">
-                <Grid>
+        <Grid Grid.Column="0" RowDefinitions="*" Margin="0,0,6,0" MinHeight="0" VerticalAlignment="Stretch">
+            <Border x:Name="LocalPilotsHost" Classes="glass" Padding="2" MinHeight="0" VerticalAlignment="Stretch"
+                    ToolTip.Tip="Ctrl+V or right-click Paste: replace local from clipboard. Ctrl+P: merge paste. Right-click: Clear.">
+                <Grid MinHeight="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                     <Image Source="avares://SLH/Assets/local-empty-duck.png"
                            Stretch="Uniform"
                            HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -81,6 +84,32 @@
                                             BorderThickness="1" VerticalAlignment="Center" IsVisible="{Binding TagGanker}">
                                         <TextBlock Text="Gank" FontSize="8" FontWeight="SemiBold" Foreground="#ef9a9a" VerticalAlignment="Center"/>
                                     </Border>
+                                    <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" Margin="2,0,4,0">
+                                        <Border Width="18" Height="18" Background="#0a0e14" BorderBrush="#2d3d50" BorderThickness="1"
+                                                ClipToBounds="True" VerticalAlignment="Center"
+                                                IsVisible="{Binding TopShipBitmap1, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}">
+                                            <ToolTip.Tip>
+                                                <TextBlock Text="{Binding TopShipTooltip1}" TextWrapping="Wrap" MaxWidth="240" FontSize="11"/>
+                                            </ToolTip.Tip>
+                                            <Image Width="18" Height="18" Source="{Binding TopShipBitmap1}" Stretch="UniformToFill"/>
+                                        </Border>
+                                        <Border Width="18" Height="18" Background="#0a0e14" BorderBrush="#2d3d50" BorderThickness="1"
+                                                ClipToBounds="True" VerticalAlignment="Center"
+                                                IsVisible="{Binding TopShipBitmap2, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}">
+                                            <ToolTip.Tip>
+                                                <TextBlock Text="{Binding TopShipTooltip2}" TextWrapping="Wrap" MaxWidth="240" FontSize="11"/>
+                                            </ToolTip.Tip>
+                                            <Image Width="18" Height="18" Source="{Binding TopShipBitmap2}" Stretch="UniformToFill"/>
+                                        </Border>
+                                        <Border Width="18" Height="18" Background="#0a0e14" BorderBrush="#2d3d50" BorderThickness="1"
+                                                ClipToBounds="True" VerticalAlignment="Center"
+                                                IsVisible="{Binding TopShipBitmap3, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}">
+                                            <ToolTip.Tip>
+                                                <TextBlock Text="{Binding TopShipTooltip3}" TextWrapping="Wrap" MaxWidth="240" FontSize="11"/>
+                                            </ToolTip.Tip>
+                                            <Image Width="18" Height="18" Source="{Binding TopShipBitmap3}" Stretch="UniformToFill"/>
+                                        </Border>
+                                    </StackPanel>
                                     <Panel VerticalAlignment="Center">
                                         <Border Padding="5,3" BorderThickness="1" Background="#2a1f32" BorderBrush="#7B1FA2"
                                                 IsVisible="{Binding ShowThreatPendingPlaceholder}">
@@ -150,8 +179,8 @@
 
         <GridSplitter Grid.Column="1" Width="4" Background="#2d3d50" ResizeDirection="Columns"/>
 
-        <Border Grid.Column="2" Classes="glass" Padding="8">
-            <ScrollViewer Padding="0,0,0,8">
+        <Border Grid.Column="2" Classes="glass" Padding="8" VerticalAlignment="Stretch" MinHeight="0">
+            <ScrollViewer Padding="0,0,0,8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <StackPanel Spacing="6">
                     <TextBlock Text="Pilot" FontWeight="SemiBold" FontSize="12" Foreground="#00b8c8"/>
 
@@ -244,11 +273,45 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
+                        <StackPanel Spacing="6" Margin="0,2,0,0" IsVisible="{Binding SelectedPilot.HasTopShipDetail}">
+                            <TextBlock Text="Top hulls (zKill)" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8"/>
+                            <StackPanel Spacing="8" DataContext="{Binding SelectedPilot}">
+                                <StackPanel Orientation="Horizontal" Spacing="8"
+                                            IsVisible="{Binding TopShipBitmap1, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}">
+                                    <Border Width="36" Height="36" Background="#0a0e14" BorderBrush="#2d3d50" BorderThickness="1" ClipToBounds="True"
+                                            VerticalAlignment="Top">
+                                        <Image Width="36" Height="36" Source="{Binding TopShipBitmap1}" Stretch="UniformToFill"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding TopShipTooltip1}" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="11"
+                                               LineHeight="15" Foreground="#b4bcc6"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8"
+                                            IsVisible="{Binding TopShipBitmap2, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}">
+                                    <Border Width="36" Height="36" Background="#0a0e14" BorderBrush="#2d3d50" BorderThickness="1" ClipToBounds="True"
+                                            VerticalAlignment="Top">
+                                        <Image Width="36" Height="36" Source="{Binding TopShipBitmap2}" Stretch="UniformToFill"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding TopShipTooltip2}" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="11"
+                                               LineHeight="15" Foreground="#b4bcc6"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8"
+                                            IsVisible="{Binding TopShipBitmap3, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}">
+                                    <Border Width="36" Height="36" Background="#0a0e14" BorderBrush="#2d3d50" BorderThickness="1" ClipToBounds="True"
+                                            VerticalAlignment="Top">
+                                        <Image Width="36" Height="36" Source="{Binding TopShipBitmap3}" Stretch="UniformToFill"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding TopShipTooltip3}" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="11"
+                                               LineHeight="15" Foreground="#b4bcc6"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+
                         <Border Height="1" Background="#2d3d50" Margin="0,2,0,0"/>
 
                         <TextBlock Text="Notes" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8" Margin="0,2,0,0"/>
                         <TextBlock Text="{Binding DetailNotes}" TextWrapping="Wrap" FontSize="11" LineHeight="15" Foreground="#b8c2cc"/>
-                        <TextBlock Text="{Binding SelectedPilot.IntelTip}" TextWrapping="Wrap" FontStyle="Italic" FontSize="11" LineHeight="15" Foreground="#9aa6b2"/>
+
+
                     </StackPanel>
 
                     <TextBlock Text="Select a pilot."

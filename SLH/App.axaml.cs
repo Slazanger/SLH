@@ -38,10 +38,12 @@ public partial class App : Application
             var enrichmentCache = new EnrichmentDiskCache();
             var characterTags = new CharacterTagStore();
             var zkill = new ZkillClient(configuration, enrichmentCache);
+            var shipIconCache = new ShipIconCache(configuration);
+            var shipTypeNameCache = new ShipTypeNameCache(configuration);
             var logWatcher = new LocalChatLogWatcher();
 
-            var mainVm = new MainWindowViewModel(eve, contactStandings, settingsStore, header, zkill, enrichmentCache,
-                characterTags, logWatcher);
+            var mainVm = new MainWindowViewModel(eve, contactStandings, settingsStore, header, zkill, shipIconCache,
+                shipTypeNameCache, enrichmentCache, characterTags, logWatcher);
 
             var mainWindow = new MainWindow { DataContext = mainVm };
             mainWindow.Opened += async (_, _) => await mainVm.InitializeAsync();

@@ -1,15 +1,21 @@
 ﻿using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SLH.Models;
 using SLH.Services;
 
 namespace SLH.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
+    private const double BaseMinWidth = 680;
+    private const double BaseMinHeight = 380;
+
     private readonly EveConnectionService _eve;
     private readonly ISettingsStore _settings;
     private readonly ZkillClient _zkill;
+    private readonly ShipIconCache _shipIconCache;
+    private readonly ShipTypeNameCache _shipTypeNameCache;
     private readonly EnrichmentDiskCache _enrichmentCache;
     private readonly CharacterTagStore _characterTags;
     private readonly LocalChatLogWatcher _logWatcher;
@@ -23,12 +29,23 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     [ObservableProperty] private int _selectedTabIndex;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ScaledMinWidth))]
+    [NotifyPropertyChangedFor(nameof(ScaledMinHeight))]
+    private double _uiScale = 1.0;
+
+    public double ScaledMinWidth => BaseMinWidth * UiScale;
+
+    public double ScaledMinHeight => BaseMinHeight * UiScale;
+
     public MainWindowViewModel(
         EveConnectionService eve,
         ContactStandingIndex contactStandings,
         ISettingsStore settings,
         HeaderState header,
         ZkillClient zkill,
+        ShipIconCache shipIconCache,
+        ShipTypeNameCache shipTypeNameCache,
         EnrichmentDiskCache enrichmentCache,
         CharacterTagStore characterTags,
         LocalChatLogWatcher logWatcher)
@@ -36,17 +53,21 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _eve = eve;
         _settings = settings;
         _zkill = zkill;
+        _shipIconCache = shipIconCache;
+        _shipTypeNameCache = shipTypeNameCache;
         _enrichmentCache = enrichmentCache;
         _characterTags = characterTags;
         _logWatcher = logWatcher;
         Header = header;
 
-        Local = new LocalAnalyserViewModel(eve, contactStandings, settings, header, zkill, enrichmentCache, characterTags,
-            logWatcher);
+        Local = new LocalAnalyserViewModel(eve, contactStandings, settings, header, zkill, shipIconCache, shipTypeNameCache,
+            enrichmentCache, characterTags, logWatcher);
         Dscan = new DscanViewModel();
         Lookup = new CharacterLookupViewModel(eve, zkill, settings, enrichmentCache);
         Settings = new SettingsViewModel(settings, eve, enrichmentCache, header, OnSettingsApplied,
             msg => Header.SystemLine = $"Login failed: {msg}");
+
+        RefreshUiScaleFromStore();
 
         _locationTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(45) };
         _locationTimer.Tick += OnLocationTick;
@@ -77,8 +98,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     }
 
     /// <param name="reloadSettingsView">Reload settings fields from disk (login/logout); false after auto-save so the chat folder text box is not reset mid-edit.</param>
+    private void RefreshUiScaleFromStore()
+    {
+        var s = _settings.Load();
+        UiScale = Math.Clamp(s.UiScale, AppSettings.UiScaleMin, AppSettings.UiScaleMax);
+    }
+
     private void OnSettingsApplied(bool reloadSettingsView)
     {
+        RefreshUiScaleFromStore();
         Header.CharacterDisplayName = _eve.CharacterName;
         Header.PortraitUrl = _eve.PortraitUrl;
         Header.EsiConnected = _eve.IsAuthenticated;
@@ -145,5 +173,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _enrichmentCache.Dispose();
         _characterTags.Dispose();
         _zkill.Dispose();
+        _shipIconCache.Dispose();
+        _shipTypeNameCache.Dispose();
     }
 }

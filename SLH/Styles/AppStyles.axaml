@@ -52,6 +52,9 @@
         <Setter Property="FontSize" Value="10"/>
         <Setter Property="Padding" Value="6,2"/>
         <Setter Property="Margin" Value="0,0,1,0"/>
+        <!-- Avoid stretching tab headers to the full strip height when content uses vertical stretch -->
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="VerticalContentAlignment" Value="Top"/>
     </Style>
     <Style Selector="TabItem:selected">
         <Setter Property="FontWeight" Value="SemiBold"/>

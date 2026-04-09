@@ -12,4 +12,6 @@ public static class AppPaths
     public static string EnrichmentCachePath => Path.Combine(AppDataDirectory, "enrichment-cache.json");
 
     public static string CharacterTagsPath => Path.Combine(AppDataDirectory, "character-tags.json");
+
+    public static string ShipTypeNamesPath => Path.Combine(AppDataDirectory, "ship-type-names.json");
 }
