@@ -1,0 +1,147 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:avalconv="using:Avalonia.Data.Converters"
+             xmlns:slh="using:SLH.Converters"
+             xmlns:vm="using:SLH.ViewModels"
+             x:Class="SLH.Views.PilotDetailPanelView"
+             x:DataType="vm:IPilotDetailPanelHost"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch">
+
+    <StackPanel Spacing="6" Margin="0,0,0,8">
+            <TextBlock Text="Pilot" FontWeight="SemiBold" FontSize="12" Foreground="#00b8c8"/>
+
+            <StackPanel IsVisible="{Binding PilotDetail, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}" Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Border Width="44" Height="44" CornerRadius="0" Background="#0a0e14" BorderBrush="#2A4B7C" BorderThickness="1" ClipToBounds="True"
+                            DataContext="{Binding PilotDetail}">
+                        <Panel>
+                            <Image Width="44" Height="44" Source="{Binding PortraitBitmap}" Stretch="UniformToFill"
+                                   IsVisible="{Binding PortraitBitmap, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}"/>
+                            <TextBlock Text="♦" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Foreground="#5a7090"
+                                       IsVisible="{Binding PortraitBitmap, Converter={x:Static avalconv:ObjectConverters.IsNull}}"/>
+                        </Panel>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding PilotDetail.Name}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" LineHeight="16"
+                                   Foreground="{Binding PilotDetail.StandingForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,3,0,0" IsVisible="{Binding PilotDetail.HasAnyCustomTag}">
+                            <TextBlock Text="Tags" FontSize="10" Foreground="#8490a0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding PilotDetail.CustomTagsLine}" FontSize="10" Foreground="#9ec8d8" TextWrapping="Wrap"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,4,0,0" Spacing="2" IsVisible="{Binding PilotDetail.HasCorpDetail}">
+                            <TextBlock Text="Corporation" FontSize="10" Foreground="#8490a0"/>
+                            <TextBlock Text="{Binding PilotDetail.CorpDetailLine}" FontSize="11" TextWrapping="Wrap" LineHeight="15" Foreground="#9aa8b6"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,3,0,0" Spacing="2" IsVisible="{Binding PilotDetail.HasAllianceDetail}">
+                            <TextBlock Text="Alliance" FontSize="10" Foreground="#8490a0"/>
+                            <TextBlock Text="{Binding PilotDetail.AllianceDetailLine}" FontSize="11" TextWrapping="Wrap" LineHeight="15" Foreground="#9aa8b6"/>
+                        </StackPanel>
+                        <Panel Margin="0,4,0,0" HorizontalAlignment="Left">
+                            <Border Padding="6,3" BorderThickness="1" Background="#2a1f32" BorderBrush="#7B1FA2"
+                                    IsVisible="{Binding PilotDetail.ShowThreatPendingPlaceholder}">
+                                <TextBlock Text="????" FontWeight="SemiBold" FontSize="11" Foreground="#CE93D8"
+                                           ToolTip.Tip="zKill threat not loaded yet"/>
+                            </Border>
+                            <Border Padding="4,2" BorderThickness="1"
+                                    Background="{Binding PilotDetail.ThreatBadgeBackground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
+                                    BorderBrush="{Binding PilotDetail.ThreatBadgeBorderBrush, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"
+                                    IsVisible="{Binding PilotDetail.ShowThreatBadgeValues}">
+                                <TextBlock FontWeight="SemiBold" FontSize="11"
+                                           Foreground="{Binding PilotDetail.ThreatForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}">
+                                    <Run Text="{Binding PilotDetail.ThreatLabel}"/>
+                                    <Run Text=" "/>
+                                    <Run Text="{Binding PilotDetail.ThreatScore}"/>
+                                </TextBlock>
+                            </Border>
+                        </Panel>
+                    </StackPanel>
+                </StackPanel>
+
+                <Border Height="1" Background="#2d3d50" Margin="0,2,0,0"/>
+
+                <TextBlock TextWrapping="Wrap" FontSize="11" LineHeight="15">
+                    <Run Text="Kills " Foreground="#8a9aaa"/><Run Text="{Binding PilotDetail.ShipsDestroyed}" Foreground="#c4ccd4"/>
+                    <Run Text="  Losses " Foreground="#8a9aaa"/><Run Text="{Binding PilotDetail.ShipsLost}" Foreground="#c4ccd4"/>
+                </TextBlock>
+                <TextBlock Text="{Binding PilotDetail.ShipsHint}" TextWrapping="Wrap" FontSize="11" LineHeight="15" Foreground="#aab4be"/>
+
+                <StackPanel Spacing="4" IsVisible="{Binding PilotDetail.HasZkillDetail}">
+                    <TextBlock Text="{Binding PilotDetail.ZkillRatiosLine}" TextWrapping="Wrap" FontSize="11" LineHeight="15" Foreground="#b4bcc6"/>
+                    <TextBlock TextWrapping="Wrap" FontSize="11" LineHeight="15" Foreground="#c4ccd4">
+                        <Run Text="Solo kills " Foreground="#8a9aaa"/><Run Text="{Binding PilotDetail.ZkillSoloKills}"/>
+                        <Run Text="  Solo losses " Foreground="#8a9aaa"/><Run Text="{Binding PilotDetail.ZkillSoloLosses}"/>
+                    </TextBlock>
+                    <TextBlock Text="{Binding PilotDetail.ZkillPvpSummary}" TextWrapping="Wrap" FontSize="11" LineHeight="15" Foreground="#b4bcc6"/>
+                    <TextBlock Text="{Binding PilotDetail.ZkillCynoHint}" TextWrapping="Wrap" FontSize="11" LineHeight="15" Foreground="#d4a5e8"
+                               IsVisible="{Binding PilotDetail.HasZkillCynoHint}"/>
+                </StackPanel>
+
+                <Border Height="1" Background="#2d3d50" Margin="0,2,0,0"/>
+
+                <TextBlock Text="{Binding PilotDetail.ActivityRegion}" FontWeight="SemiBold" FontSize="11" Foreground="#00a8b8" Margin="0,2,0,0"/>
+                <TextBlock Text="Activity heatmap (UTC, zKill activity)" FontSize="10" Foreground="#8490a0"/>
+                <TextBlock Text="{Binding ActivityHeatmapUtcLine}" TextWrapping="Wrap" FontSize="10" LineHeight="14" Foreground="#a8b2bc"/>
+                <ItemsControl ItemsSource="{Binding ActivityHeatmap}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="2"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ActivityHeatmapCellViewModel">
+                            <Border Width="8" MaxHeight="40" MinHeight="2" VerticalAlignment="Bottom"
+                                    Height="{Binding BarHeight}" Background="#F57C00" CornerRadius="0"
+                                    BorderThickness="1"
+                                    BorderBrush="{Binding IsCurrentUtcHour, Converter={x:Static slh:BoolBrushConverter.HeatmapCurrentHourOutline}}"
+                                    ToolTip.Tip="{Binding Tooltip}"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <StackPanel Spacing="6" Margin="0,2,0,0" IsVisible="{Binding PilotDetail.HasTopShipDetail}">
+                    <TextBlock Text="Top hulls (zKill)" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8"/>
+                    <StackPanel Spacing="8" DataContext="{Binding PilotDetail}">
+                        <StackPanel Orientation="Horizontal" Spacing="8"
+                                    IsVisible="{Binding TopShipBitmap1, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}">
+                            <Border Width="36" Height="36" Background="#0a0e14" BorderBrush="#2d3d50" BorderThickness="1" ClipToBounds="True"
+                                    VerticalAlignment="Top">
+                                <Image Width="36" Height="36" Source="{Binding TopShipBitmap1}" Stretch="UniformToFill"/>
+                            </Border>
+                            <TextBlock Text="{Binding TopShipTooltip1}" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="11"
+                                       LineHeight="15" Foreground="#b4bcc6"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8"
+                                    IsVisible="{Binding TopShipBitmap2, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}">
+                            <Border Width="36" Height="36" Background="#0a0e14" BorderBrush="#2d3d50" BorderThickness="1" ClipToBounds="True"
+                                    VerticalAlignment="Top">
+                                <Image Width="36" Height="36" Source="{Binding TopShipBitmap2}" Stretch="UniformToFill"/>
+                            </Border>
+                            <TextBlock Text="{Binding TopShipTooltip2}" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="11"
+                                       LineHeight="15" Foreground="#b4bcc6"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8"
+                                    IsVisible="{Binding TopShipBitmap3, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}">
+                            <Border Width="36" Height="36" Background="#0a0e14" BorderBrush="#2d3d50" BorderThickness="1" ClipToBounds="True"
+                                    VerticalAlignment="Top">
+                                <Image Width="36" Height="36" Source="{Binding TopShipBitmap3}" Stretch="UniformToFill"/>
+                            </Border>
+                            <TextBlock Text="{Binding TopShipTooltip3}" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="11"
+                                       LineHeight="15" Foreground="#b4bcc6"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Spacing="4" IsVisible="{Binding ShowPilotDetailNotes}">
+                    <Border Height="1" Background="#2d3d50" Margin="0,2,0,0"/>
+                    <TextBlock Text="Notes" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8" Margin="0,2,0,0"/>
+                    <TextBlock Text="{Binding DetailNotes}" TextWrapping="Wrap" FontSize="11" LineHeight="15" Foreground="#b8c2cc"/>
+                </StackPanel>
+            </StackPanel>
+
+            <TextBlock Text="Select a pilot."
+                       IsVisible="{Binding ShowEmptyPilotHint}"
+                       FontSize="11" Foreground="#8a96a4"/>
+    </StackPanel>
+</UserControl>

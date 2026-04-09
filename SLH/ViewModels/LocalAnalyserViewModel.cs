@@ -8,7 +8,7 @@ using SLH.Services;
 
 namespace SLH.ViewModels;
 
-public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
+public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPilotDetailPanelHost
 {
     /// <summary>ESI POST /universe/names/ rejects oversized bodies; keep batches conservative.</summary>
     private const int BulkNamesBatchSize = 500;
@@ -37,6 +37,12 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
     public ObservableCollection<PilotRowViewModel> Pilots { get; } = new();
 
     public ObservableCollection<ActivityHeatmapCellViewModel> ActivityHeatmap { get; } = new();
+
+    public PilotRowViewModel? PilotDetail => SelectedPilot;
+
+    public bool ShowPilotDetailNotes => true;
+
+    public bool ShowEmptyPilotHint => SelectedPilot == null;
 
     [ObservableProperty] private PilotRowViewModel? _selectedPilot;
     [ObservableProperty] private string _detailNotes = "";
@@ -619,72 +625,19 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
         {
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                ClearZkillRowFields(row);
+                row.ClearZkillIntel();
                 if (ReferenceEquals(SelectedPilot, row))
                     RebuildActivityHeatmap();
             });
             return;
         }
 
-        var cyno = ZkillIntelHeuristics.BuildCynoHint(stats);
-
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
-            row.ShowThreatPendingPlaceholder = false;
-            row.ThreatScore = stats.ThreatScore;
-            row.ShipsDestroyed = stats.ShipsDestroyed;
-            row.ShipsLost = stats.ShipsLost;
-            row.IskDestroyed = stats.IskDestroyed;
-            row.IskLost = stats.IskLost;
-            row.IsFriendly = stats.ThreatScore < 15;
-            row.ActivityRegion = "Recent activity (zKill aggregates)";
-            row.IntelTip = stats.SoloKills > 10
-                ? "TIP: High solo activity on zKill — expect aggressive solo pilots."
-                : "TIP: Review loss patterns on zKill for ship preferences.";
-            row.ActivityBuckets = stats.ActivityBuckets.ToArray();
-            row.ShipsHint = $"Ships destroyed / lost: {stats.ShipsDestroyed} / {stats.ShipsLost} (zKill)";
-            row.ZkillSoloKills = stats.SoloKills;
-            row.ZkillSoloLosses = stats.SoloLosses;
-            row.ZkillRatiosLine = ZkillIntelHeuristics.BuildRatiosLine(stats);
-            row.ZkillPvpSummary = ZkillIntelHeuristics.BuildPvpSummary(stats);
-            row.ZkillCynoHint = cyno ?? "";
-            row.TagFcFromZkill = stats.MonitorInTopShips;
-            row.ActivityHourCounts = CopyActivity24(stats.ActivityHourCounts);
-            row.ApplyTopShipsFromZkill(stats.TopShipTypeIds, stats.TopShipKills);
+            row.ApplyZkillStats(stats);
             if (ReferenceEquals(SelectedPilot, row))
                 RebuildActivityHeatmap();
         });
-    }
-
-    private static int[] CopyActivity24(IReadOnlyList<int> src)
-    {
-        var a = new int[24];
-        for (var i = 0; i < 24 && i < src.Count; i++)
-            a[i] = src[i];
-        return a;
-    }
-
-    private static void ClearZkillRowFields(PilotRowViewModel row)
-    {
-        row.ShowThreatPendingPlaceholder = false;
-        row.ThreatScore = 0;
-        row.ShipsDestroyed = 0;
-        row.ShipsLost = 0;
-        row.IskDestroyed = 0;
-        row.IskLost = 0;
-        row.IsFriendly = false;
-        row.ActivityRegion = "";
-        row.IntelTip = "";
-        row.ActivityBuckets = new int[24];
-        row.ActivityHourCounts = new int[24];
-        row.ShipsHint = "";
-        row.ZkillSoloKills = 0;
-        row.ZkillSoloLosses = 0;
-        row.ZkillRatiosLine = "";
-        row.ZkillPvpSummary = "";
-        row.ZkillCynoHint = "";
-        row.TagFcFromZkill = false;
-        row.ApplyTopShipsFromZkill(Array.Empty<int>(), Array.Empty<int>());
     }
 
     private void UpdateHeaderCount()
@@ -698,6 +651,9 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedPilotChanged(PilotRowViewModel? value)
     {
+        OnPropertyChanged(nameof(PilotDetail));
+        OnPropertyChanged(nameof(ShowEmptyPilotHint));
+
         _selectionRefreshCts?.Cancel();
         _selectionRefreshCts?.Dispose();
         _selectionRefreshCts = null;

@@ -63,7 +63,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         Local = new LocalAnalyserViewModel(eve, contactStandings, settings, header, zkill, shipIconCache, shipTypeNameCache,
             enrichmentCache, characterTags, logWatcher);
         Dscan = new DscanViewModel();
-        Lookup = new CharacterLookupViewModel(eve, zkill, settings, enrichmentCache);
+        Lookup = new CharacterLookupViewModel(eve, zkill, settings, enrichmentCache, shipIconCache, shipTypeNameCache,
+            characterTags);
         Settings = new SettingsViewModel(settings, eve, enrichmentCache, header, OnSettingsApplied,
             msg => Header.SystemLine = $"Login failed: {msg}");
 

@@ -1,8 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SLH.ViewModels"
-             xmlns:services="using:SLH.Services"
-             xmlns:slh="using:SLH.Converters"
+             xmlns:views="using:SLH.Views"
              x:Class="SLH.Views.CharacterLookupView"
              x:DataType="vm:CharacterLookupViewModel"
              HorizontalAlignment="Stretch"
@@ -17,62 +16,8 @@
             <TextBlock Text="{Binding Status}" Foreground="#F57C00" TextWrapping="Wrap" FontSize="10"
                        IsVisible="{Binding ShowStatus}"/>
 
-            <Border Classes="glass" IsVisible="{Binding HasResult}" Padding="6">
-                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" Margin="0">
-                    <Border Grid.RowSpan="6" Width="80" Height="80" Margin="0,0,8,0" CornerRadius="0" ClipToBounds="True" Background="#0a0e14" BorderBrush="#2A4B7C" BorderThickness="1">
-                        <Image Source="{Binding PortraitBitmap}" Stretch="UniformToFill"/>
-                    </Border>
-
-                    <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding ResolvedName}" FontWeight="SemiBold" FontSize="12" Foreground="#e8eef4"/>
-                    <TextBlock Grid.Column="1" Grid.Row="1" Margin="0,2,0,0" FontSize="10">
-                        <Run Text="Corp " Foreground="#8a9aaa"/><Run Text="{Binding CorpName}"/> <Run Text="["/><Run Text="{Binding CorpTicker}"/><Run Text="]"/>
-                    </TextBlock>
-                    <StackPanel Grid.Column="1" Grid.Row="2" Orientation="Horizontal" Spacing="0" Margin="0,4,0,0">
-                        <TextBlock Text="Threat " FontSize="10" Foreground="#8a9aaa" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding ThreatLabel}" FontSize="10" VerticalAlignment="Center"
-                                   Foreground="{Binding ThreatForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
-                        <TextBlock Text=" (" FontSize="10" Foreground="#8a9aaa" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding ThreatScore}" FontSize="10" VerticalAlignment="Center"
-                                   Foreground="{Binding ThreatForeground, Converter={x:Static slh:HexColorToBrushConverter.Instance}}"/>
-                        <TextBlock Text=")" FontSize="10" Foreground="#8a9aaa" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <TextBlock Grid.Column="1" Grid.Row="3" Margin="0,2,0,0" FontSize="10">
-                        <Run Text="K/L " Foreground="#8a9aaa"/><Run Text="{Binding ShipsDestroyed}"/><Run Text="/"/><Run Text="{Binding ShipsLost}"/>
-                    </TextBlock>
-
-                    <StackPanel Grid.Column="1" Grid.Row="4" Margin="0,6,0,0" Spacing="2" IsVisible="{Binding HasZkillDetail}">
-
-                        <TextBlock Text="{Binding ZkillRatiosLine}" TextWrapping="Wrap" Opacity="0.9" FontSize="10"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="10" Opacity="0.85">
-                            <Run Text="Solo kills " Foreground="#8a9aaa"/><Run Text="{Binding ZkillSoloKills}"/>
-                            <Run Text="  Solo losses " Foreground="#8a9aaa"/><Run Text="{Binding ZkillSoloLosses}"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding ZkillPvpSummary}" TextWrapping="Wrap" FontSize="10" Opacity="0.9"/>
-                        <TextBlock Text="{Binding ZkillCynoHint}" TextWrapping="Wrap" FontSize="10" Foreground="#CE93D8" Opacity="0.95"
-                                   IsVisible="{Binding HasZkillCynoHint}"/>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="1" Grid.Row="5" Margin="0,6,0,0" Spacing="4">
-                        <TextBlock Text="Activity heatmap (EveTZ, zKill activity)" FontSize="9" Opacity="0.55" Foreground="#8a9aaa"/>
-                        <TextBlock Text="{Binding ActivityHeatmapUtcLine}" FontSize="9" TextWrapping="Wrap" Opacity="0.9"/>
-                        <ItemsControl ItemsSource="{Binding ActivityHeatmap}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" Spacing="1"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:ActivityHeatmapCellViewModel">
-                                    <Border Width="7" MaxHeight="44" MinHeight="2" VerticalAlignment="Bottom"
-                                            Height="{Binding BarHeight}" Background="#00a0b0" CornerRadius="0"
-                                            BorderThickness="1"
-                                            BorderBrush="{Binding IsCurrentUtcHour, Converter={x:Static slh:BoolBrushConverter.HeatmapCurrentHourOutline}}"
-                                            ToolTip.Tip="{Binding Tooltip}"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Grid>
+            <Border Classes="glass" IsVisible="{Binding HasResult}" Padding="8">
+                <views:PilotDetailPanelView HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
             </Border>
         </StackPanel>
     </ScrollViewer>

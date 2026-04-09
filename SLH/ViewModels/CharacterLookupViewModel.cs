@@ -1,6 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Net.Http;
-using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -8,67 +6,50 @@ using SLH.Services;
 
 namespace SLH.ViewModels;
 
-public partial class CharacterLookupViewModel : ObservableObject, IDisposable
+public partial class CharacterLookupViewModel : ObservableObject, IDisposable, IPilotDetailPanelHost
 {
     private readonly EveConnectionService _eve;
     private readonly ZkillClient _zkill;
     private readonly ISettingsStore _settings;
     private readonly EnrichmentDiskCache _diskCache;
+    private readonly ShipIconCache _shipIconCache;
+    private readonly ShipTypeNameCache _shipTypeNameCache;
+    private readonly CharacterTagStore _characterTags;
     private readonly DispatcherTimer _activityUtcTimer;
 
     public ObservableCollection<ActivityHeatmapCellViewModel> ActivityHeatmap { get; } = new();
 
     [ObservableProperty] private string _searchName = "";
     [ObservableProperty] private string _status = "";
-    [ObservableProperty] private long? _characterId;
-    [ObservableProperty] private string _resolvedName = "";
-    [ObservableProperty] private string _corpName = "";
-    [ObservableProperty] private string _corpTicker = "";
-    [ObservableProperty] private string _portraitUrl = "";
-    [ObservableProperty] private int _shipsDestroyed;
-    [ObservableProperty] private int _shipsLost;
-    [ObservableProperty] private int _zkillSoloKills;
-    [ObservableProperty] private int _zkillSoloLosses;
-    [ObservableProperty] private string _zkillRatiosLine = "";
-    [ObservableProperty] private string _zkillPvpSummary = "";
-    [ObservableProperty] private string _zkillCynoHint = "";
-    [ObservableProperty] private int _threatScore;
-    [ObservableProperty] private string _threatLabel = "";
-    [ObservableProperty] private string _threatForeground = "#8a9aaa";
-    [ObservableProperty] private int[] _activityBuckets = new int[24];
-    [ObservableProperty] private int[] _activityHourCounts = new int[24];
+    [ObservableProperty] private PilotRowViewModel? _pilotDetail;
     [ObservableProperty] private string _activityHeatmapUtcLine = "";
-    [ObservableProperty] private Bitmap? _portraitBitmap;
+
+    public string DetailNotes => "";
+
+    public bool ShowPilotDetailNotes => false;
+
+    public bool ShowEmptyPilotHint => false;
 
     public bool ShowStatus => !string.IsNullOrWhiteSpace(Status);
-    public bool HasResult => CharacterId is > 0;
 
-    public bool HasZkillDetail => !string.IsNullOrWhiteSpace(ZkillRatiosLine);
+    public bool HasResult => PilotDetail?.CharacterId is > 0;
 
-    public bool HasZkillCynoHint => !string.IsNullOrWhiteSpace(ZkillCynoHint);
-
-    partial void OnZkillRatiosLineChanged(string value) => OnPropertyChanged(nameof(HasZkillDetail));
-
-    partial void OnZkillCynoHintChanged(string value) => OnPropertyChanged(nameof(HasZkillCynoHint));
-
-    partial void OnThreatScoreChanged(int value) => RefreshThreatForeground();
-
-    partial void OnThreatLabelChanged(string value) => RefreshThreatForeground();
-
-    private void RefreshThreatForeground()
-    {
-        ThreatForeground = string.IsNullOrWhiteSpace(ThreatLabel) && ThreatScore == 0
-            ? "#8a9aaa"
-            : ThreatTierColors.ForegroundForScore(ThreatScore);
-    }
-
-    public CharacterLookupViewModel(EveConnectionService eve, ZkillClient zkill, ISettingsStore settings,
-        EnrichmentDiskCache diskCache)
+    public CharacterLookupViewModel(
+        EveConnectionService eve,
+        ZkillClient zkill,
+        ISettingsStore settings,
+        EnrichmentDiskCache diskCache,
+        ShipIconCache shipIconCache,
+        ShipTypeNameCache shipTypeNameCache,
+        CharacterTagStore characterTags)
     {
         _eve = eve;
         _zkill = zkill;
         _settings = settings;
         _diskCache = diskCache;
+        _shipIconCache = shipIconCache;
+        _shipTypeNameCache = shipTypeNameCache;
+        _characterTags = characterTags;
 
         _activityUtcTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
         _activityUtcTimer.Tick += OnActivityUtcTick;
@@ -76,20 +57,22 @@ public partial class CharacterLookupViewModel : ObservableObject, IDisposable
 
     private void OnActivityUtcTick(object? sender, EventArgs e)
     {
-        if (HasResult)
+        if (PilotDetail != null)
             RebuildActivityHeatmap();
     }
 
     private void RebuildActivityHeatmap()
     {
-        if (!HasResult)
+        if (PilotDetail == null)
         {
             ActivityHeatmap.Clear();
             ActivityHeatmapUtcLine = "";
             return;
         }
 
-        if (ActivityHourCounts is not { Length: 24 } || ActivityBuckets is not { Length: 24 })
+        var counts = PilotDetail.ActivityHourCounts;
+        var bars = PilotDetail.ActivityBuckets;
+        if (counts is not { Length: 24 } || bars is not { Length: 24 })
         {
             ActivityHeatmap.Clear();
             ActivityHeatmapUtcLine = "";
@@ -97,18 +80,33 @@ public partial class CharacterLookupViewModel : ObservableObject, IDisposable
         }
 
         var utc = DateTime.UtcNow;
-        ActivityHeatmapPresenter.Rebuild(ActivityHeatmap, ActivityHourCounts, ActivityBuckets, utc);
-        ActivityHeatmapUtcLine = ActivityHeatmapPresenter.BuildUtcLine(ActivityHourCounts, utc);
+        ActivityHeatmapPresenter.Rebuild(ActivityHeatmap, counts, bars, utc);
+        ActivityHeatmapUtcLine = ActivityHeatmapPresenter.BuildUtcLine(counts, utc);
     }
 
     public void Dispose()
     {
         _activityUtcTimer.Stop();
         _activityUtcTimer.Tick -= OnActivityUtcTick;
+        PilotDetail?.ReleaseResources();
     }
 
     partial void OnStatusChanged(string value) => OnPropertyChanged(nameof(ShowStatus));
-    partial void OnCharacterIdChanged(long? value) => OnPropertyChanged(nameof(HasResult));
+
+    partial void OnPilotDetailChanged(PilotRowViewModel? value)
+    {
+        OnPropertyChanged(nameof(HasResult));
+        if (value == null)
+        {
+            _activityUtcTimer.Stop();
+            ActivityHeatmap.Clear();
+            ActivityHeatmapUtcLine = "";
+            return;
+        }
+
+        RebuildActivityHeatmap();
+        _activityUtcTimer.Start();
+    }
 
     [RelayCommand]
     private async Task LookupAsync(CancellationToken cancellationToken = default)
@@ -123,27 +121,11 @@ public partial class CharacterLookupViewModel : ObservableObject, IDisposable
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             Status = "Resolving…";
-            CharacterId = null;
-            ResolvedName = "";
-            CorpName = "";
-            CorpTicker = "";
-            PortraitUrl = "";
-            ThreatScore = 0;
-            ThreatLabel = "";
-            ShipsDestroyed = 0;
-            ShipsLost = 0;
-            ZkillSoloKills = 0;
-            ZkillSoloLosses = 0;
-            ZkillRatiosLine = "";
-            ZkillPvpSummary = "";
-            ZkillCynoHint = "";
-            ActivityBuckets = new int[24];
-            ActivityHourCounts = new int[24];
+            PilotDetail?.ReleaseResources();
+            PilotDetail = null;
             ActivityHeatmap.Clear();
             ActivityHeatmapUtcLine = "";
             _activityUtcTimer.Stop();
-            PortraitBitmap?.Dispose();
-            PortraitBitmap = null;
         });
 
         try
@@ -169,13 +151,14 @@ public partial class CharacterLookupViewModel : ObservableObject, IDisposable
             }
 
             var info = await _eve.Api.Character.GetCharacterPublicInfoAsync(resolvedId).WaitAsync(cancellationToken).ConfigureAwait(false);
-            var resolvedDisplayName = string.IsNullOrWhiteSpace(info.Model?.Name) ? q : info.Model.Name;
+            var resolvedDisplayName = info.Model is { Name: { } nm } && !string.IsNullOrWhiteSpace(nm) ? nm : q;
             _diskCache.RememberCharacterId(resolvedDisplayName, resolvedId);
 
             string corpName = "", corpTicker = "";
+            long corpId = 0;
             if (info.Model != null)
             {
-                var corpId = info.Model.CorporationId;
+                corpId = info.Model.CorporationId;
                 if (_diskCache.TryGetCorporation(corpId, out var t, out var n)
                     && !string.IsNullOrWhiteSpace(t)
                     && !string.IsNullOrWhiteSpace(n))
@@ -193,78 +176,69 @@ public partial class CharacterLookupViewModel : ObservableObject, IDisposable
                 }
             }
 
-            var shipsDestroyed = 0;
-            var shipsLost = 0;
-            var threatScore = 0;
-            var threatLabel = "";
-            var buckets = new int[24];
-            var zkillSoloKills = 0;
-            var zkillSoloLosses = 0;
-            var zkillRatiosLine = "";
-            var zkillPvpSummary = "";
-            var zkillCynoHint = "";
-            var hourCounts = new int[24];
-            if (_settings.Load().EnableZkillIntel)
-            {
-                var stats = await _zkill.GetCharacterStatsAsync(resolvedId, cancellationToken).ConfigureAwait(false);
-                if (stats != null)
-                {
-                    shipsDestroyed = stats.ShipsDestroyed;
-                    shipsLost = stats.ShipsLost;
-                    threatScore = stats.ThreatScore;
-                    threatLabel = stats.ThreatLabel;
-                    buckets = stats.ActivityBuckets.ToArray();
-                    for (var i = 0; i < 24 && i < stats.ActivityHourCounts.Count; i++)
-                        hourCounts[i] = stats.ActivityHourCounts[i];
-                    zkillSoloKills = stats.SoloKills;
-                    zkillSoloLosses = stats.SoloLosses;
-                    zkillRatiosLine = ZkillIntelHeuristics.BuildRatiosLine(stats);
-                    zkillPvpSummary = ZkillIntelHeuristics.BuildPvpSummary(stats);
-                    zkillCynoHint = ZkillIntelHeuristics.BuildCynoHint(stats) ?? "";
-                }
-            }
-
-            var portraitUrl = $"https://images.evetech.net/characters/{resolvedId}/portrait?tenant=tranquility&size=256";
-            Bitmap? portrait = null;
+            string allianceName = "", allianceTicker = "";
             try
             {
-                using var client = new HttpClient();
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("SLH/0.1");
-                await using var stream = await client.GetStreamAsync(new Uri(portraitUrl), cancellationToken).ConfigureAwait(false);
-                await using var ms = new MemoryStream();
-                await stream.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
-                ms.Position = 0;
-                portrait = await Task.Run(() => Bitmap.DecodeToWidth(ms, 256), cancellationToken).ConfigureAwait(false);
+                var aff = await _eve.Api.Character.AffiliationAsync(new List<long> { resolvedId }).WaitAsync(cancellationToken).ConfigureAwait(false);
+                var a = aff.Model?.FirstOrDefault(x => x.CharacterId == resolvedId);
+                if (a != null)
+                {
+                    _diskCache.RememberAffiliation(a.CharacterId, a.CorporationId, a.AllianceId);
+                    if (a.AllianceId is { } aid && aid > 0)
+                    {
+                        if (_diskCache.TryGetAlliance(aid, out var at, out var an) && !string.IsNullOrWhiteSpace(at))
+                        {
+                            allianceTicker = at;
+                            allianceName = an ?? "";
+                        }
+                        else
+                        {
+                            var all = await _eve.Api.Alliance.GetAllianceInfoAsync(aid).WaitAsync(cancellationToken).ConfigureAwait(false);
+                            allianceTicker = all.Model?.Ticker ?? "";
+                            allianceName = all.Model?.Name ?? "";
+                            if (!string.IsNullOrWhiteSpace(allianceTicker))
+                                _diskCache.RememberAlliance(aid, allianceTicker, allianceName);
+                        }
+                    }
+                }
             }
             catch
             {
-                portrait?.Dispose();
-                portrait = null;
+                // ESI — alliance optional
             }
+
+            ZkillStats? stats = null;
+            if (_settings.Load().EnableZkillIntel)
+                stats = await _zkill.GetCharacterStatsAsync(resolvedId, cancellationToken).ConfigureAwait(false);
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                CharacterId = resolvedId;
-                ResolvedName = resolvedDisplayName;
-                PortraitUrl = portraitUrl;
-                CorpName = corpName;
-                CorpTicker = corpTicker;
-                ShipsDestroyed = shipsDestroyed;
-                ShipsLost = shipsLost;
-                ZkillSoloKills = zkillSoloKills;
-                ZkillSoloLosses = zkillSoloLosses;
-                ZkillRatiosLine = zkillRatiosLine;
-                ZkillPvpSummary = zkillPvpSummary;
-                ZkillCynoHint = zkillCynoHint;
-                ThreatScore = threatScore;
-                ThreatLabel = threatLabel;
-                ActivityBuckets = buckets;
-                ActivityHourCounts = hourCounts;
-                PortraitBitmap?.Dispose();
-                PortraitBitmap = portrait;
+                var row = new PilotRowViewModel(_shipIconCache, _shipTypeNameCache)
+                {
+                    Name = resolvedDisplayName,
+                    CharacterId = resolvedId,
+                    Subtitle = resolvedDisplayName,
+                    CorpName = corpName,
+                    CorpTicker = corpTicker,
+                    AllianceName = allianceName,
+                    AllianceTicker = allianceTicker,
+                    PortraitUrl = $"https://images.evetech.net/characters/{resolvedId}/portrait?tenant=tranquility&size=64",
+                    ShowThreatPendingPlaceholder = _settings.Load().EnableZkillIntel
+                };
+                row.SetCustomTags(_characterTags.GetTags(resolvedId));
+
+                if (_settings.Load().EnableZkillIntel)
+                {
+                    if (stats != null)
+                        row.ApplyZkillStats(stats);
+                    else
+                        row.ClearZkillIntel();
+                }
+                else
+                    row.ShowThreatPendingPlaceholder = false;
+
+                PilotDetail = row;
                 Status = "";
-                RebuildActivityHeatmap();
-                _activityUtcTimer.Start();
             });
         }
         catch (Exception ex)

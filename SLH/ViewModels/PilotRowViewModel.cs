@@ -20,6 +20,62 @@ public partial class PilotRowViewModel : ObservableObject
         _shipTypeNameCache = shipTypeNameCache;
     }
 
+    public void ApplyZkillStats(ZkillStats stats)
+    {
+        ShowThreatPendingPlaceholder = false;
+        ThreatScore = stats.ThreatScore;
+        ShipsDestroyed = stats.ShipsDestroyed;
+        ShipsLost = stats.ShipsLost;
+        IskDestroyed = stats.IskDestroyed;
+        IskLost = stats.IskLost;
+        IsFriendly = stats.ThreatScore < 15;
+        ActivityRegion = "Recent activity (zKill aggregates)";
+        IntelTip = stats.SoloKills > 10
+            ? "TIP: High solo activity on zKill — expect aggressive solo pilots."
+            : "TIP: Review loss patterns on zKill for ship preferences.";
+        ActivityBuckets = stats.ActivityBuckets.ToArray();
+        ShipsHint = $"Ships destroyed / lost: {stats.ShipsDestroyed} / {stats.ShipsLost} (zKill)";
+        ZkillSoloKills = stats.SoloKills;
+        ZkillSoloLosses = stats.SoloLosses;
+        ZkillRatiosLine = ZkillIntelHeuristics.BuildRatiosLine(stats);
+        ZkillPvpSummary = ZkillIntelHeuristics.BuildPvpSummary(stats);
+        ZkillCynoHint = ZkillIntelHeuristics.BuildCynoHint(stats) ?? "";
+        TagFcFromZkill = stats.MonitorInTopShips;
+        ActivityHourCounts = CopyActivityHourCounts24(stats.ActivityHourCounts);
+        ApplyTopShipsFromZkill(stats.TopShipTypeIds, stats.TopShipKills);
+    }
+
+    public void ClearZkillIntel()
+    {
+        ShowThreatPendingPlaceholder = false;
+        ThreatScore = 0;
+        ShipsDestroyed = 0;
+        ShipsLost = 0;
+        IskDestroyed = 0;
+        IskLost = 0;
+        IsFriendly = false;
+        ActivityRegion = "";
+        IntelTip = "";
+        ActivityBuckets = new int[24];
+        ActivityHourCounts = new int[24];
+        ShipsHint = "";
+        ZkillSoloKills = 0;
+        ZkillSoloLosses = 0;
+        ZkillRatiosLine = "";
+        ZkillPvpSummary = "";
+        ZkillCynoHint = "";
+        TagFcFromZkill = false;
+        ApplyTopShipsFromZkill(Array.Empty<int>(), Array.Empty<int>());
+    }
+
+    private static int[] CopyActivityHourCounts24(IReadOnlyList<int> src)
+    {
+        var a = new int[24];
+        for (var i = 0; i < 24 && i < src.Count; i++)
+            a[i] = src[i];
+        return a;
+    }
+
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private long? _characterId;
     [ObservableProperty] private string _corpTicker = "";
