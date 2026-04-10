@@ -296,7 +296,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
                 if (!_diskCache.TryGetCharacterId(row.Name, out var cachedId))
                     continue;
                 row.CharacterId = cachedId;
-                row.PortraitUrl = $"https://images.evetech.net/characters/{cachedId}/portrait?tenant=tranquility&size=64";
+                row.PortraitUrl = EveImageUrls.CharacterPortrait(cachedId);
                 SyncPilotTagsFromStore(row);
             }
 
@@ -419,7 +419,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
                 if (!_rows.TryGetValue(nm, out var row))
                     continue;
                 row.CharacterId = cachedId;
-                row.PortraitUrl = $"https://images.evetech.net/characters/{cachedId}/portrait?tenant=tranquility&size=64";
+                row.PortraitUrl = EveImageUrls.CharacterPortrait(cachedId);
                 SyncPilotTagsFromStore(row);
             }
 
@@ -439,7 +439,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
                         if (!_rows.TryGetValue(c.Name, out var row))
                             continue;
                         row.CharacterId = c.Id;
-                        row.PortraitUrl = $"https://images.evetech.net/characters/{c.Id}/portrait?tenant=tranquility&size=64";
+                        row.PortraitUrl = EveImageUrls.CharacterPortrait(c.Id);
                         _diskCache.RememberCharacterId(c.Name, c.Id);
                         SyncPilotTagsFromStore(row);
                     }

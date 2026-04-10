@@ -222,7 +222,7 @@ public partial class CharacterLookupViewModel : ObservableObject, IDisposable, I
                     CorpTicker = corpTicker,
                     AllianceName = allianceName,
                     AllianceTicker = allianceTicker,
-                    PortraitUrl = $"https://images.evetech.net/characters/{resolvedId}/portrait?tenant=tranquility&size=64",
+                    PortraitUrl = EveImageUrls.CharacterPortrait(resolvedId),
                     ShowThreatPendingPlaceholder = _settings.Load().EnableZkillIntel
                 };
                 row.SetCustomTags(_characterTags.GetTags(resolvedId));

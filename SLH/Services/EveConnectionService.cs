@@ -26,7 +26,7 @@ public sealed class EveConnectionService
     private AuthDTO? _authDto;
     private CharacterDetails? _characterDetails;
 
-    public EveConnectionService(IConfiguration configuration, SecureSessionStore sessionStore)
+    public EveConnectionService(IConfiguration configuration, ISecureSessionStore? sessionStore)
     {
         _configuration = configuration;
         _sessionStore = sessionStore;
@@ -39,7 +39,7 @@ public sealed class EveConnectionService
     public string CharacterName => _characterDetails?.CharacterName ?? "";
     public string PortraitUrl =>
         CharacterId is { } id && id > 0
-            ? $"https://images.evetech.net/characters/{id}/portrait?tenant=tranquility&size=64"
+            ? EveImageUrls.CharacterPortrait(id)
             : "";
 
     public EVEStandardAPI Api => _api ?? throw new InvalidOperationException("ESI not initialized.");

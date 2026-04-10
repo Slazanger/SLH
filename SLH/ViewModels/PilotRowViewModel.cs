@@ -8,6 +8,9 @@ namespace SLH.ViewModels;
 
 public partial class PilotRowViewModel : ObservableObject
 {
+    private const int PortraitDecodeWidth = EveImageUrls.CharacterPortraitSize;
+    private const int TopShipIconDecodeWidth = 128;
+
     private readonly ShipIconCache _shipIconCache;
     private readonly ShipTypeNameCache _shipTypeNameCache;
     private CancellationTokenSource? _portraitLoadCts;
@@ -301,7 +304,7 @@ public partial class PilotRowViewModel : ObservableObject
             {
                 var copy = bytes.ToArray();
                 await using var ms = new MemoryStream(copy, writable: false);
-                bitmap = await Task.Run(() => Bitmap.DecodeToWidth(ms, 28), ct).ConfigureAwait(false);
+                bitmap = await Task.Run(() => Bitmap.DecodeToWidth(ms, TopShipIconDecodeWidth), ct).ConfigureAwait(false);
             }
             catch
             {
@@ -520,7 +523,7 @@ public partial class PilotRowViewModel : ObservableObject
             await using var ms = new MemoryStream();
             await stream.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
             ms.Position = 0;
-            bitmap = await Task.Run(() => Bitmap.DecodeToWidth(ms, 40), cancellationToken).ConfigureAwait(false);
+            bitmap = await Task.Run(() => Bitmap.DecodeToWidth(ms, PortraitDecodeWidth), cancellationToken).ConfigureAwait(false);
         }
         catch
         {

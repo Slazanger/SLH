@@ -8,6 +8,9 @@ namespace SLH.Services;
 /// </summary>
 public sealed class ShipIconCache : IDisposable
 {
+    /// <summary>Primary CDN size for type icons; disk cache is namespaced so size bumps do not reuse old files.</summary>
+    private const int PreferredIconSize = 128;
+
     private readonly HttpClient _http;
     private readonly string _iconsDir;
     private readonly ConcurrentDictionary<int, Task<byte[]?>> _memory = new();
@@ -49,7 +52,9 @@ public sealed class ShipIconCache : IDisposable
         try
         {
             Directory.CreateDirectory(_iconsDir);
-            var path = Path.Combine(_iconsDir, $"{typeId}.png");
+            var sizeDir = Path.Combine(_iconsDir, PreferredIconSize.ToString());
+            Directory.CreateDirectory(sizeDir);
+            var path = Path.Combine(sizeDir, $"{typeId}.png");
             if (File.Exists(path))
             {
                 var disk = await File.ReadAllBytesAsync(path).ConfigureAwait(false);
@@ -99,9 +104,10 @@ public sealed class ShipIconCache : IDisposable
 
     public void Dispose() => _http.Dispose();
 
-    /// <summary>Current CDN first (EVE docs), then legacy host.</summary>
-    private static IEnumerable<string> IconUrls(int typeId)
+    /// <summary>Current CDN (largest common size first), then smaller CDN, then legacy host.</summary>
+    private IEnumerable<string> IconUrls(int typeId)
     {
+        yield return $"https://images.evetech.net/types/{typeId}/icon?size={PreferredIconSize}";
         yield return $"https://images.evetech.net/types/{typeId}/icon?size=64";
         yield return $"https://images.eveonline.com/types/{typeId}/icon";
     }
