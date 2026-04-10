@@ -3,10 +3,12 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using SLH.Services;
 using SLH.ViewModels;
 using SLH.Views;
+using System.IO;
 using System.Linq;
 
 namespace SLH;
@@ -30,7 +32,10 @@ public partial class App : Application
                 .Build();
 
             ISettingsStore settingsStore = new SettingsStore();
-            var secure = new SecureSessionStore();
+            Directory.CreateDirectory(AppPaths.AppDataDirectory);
+            var dataProtection = DataProtectionProvider.Create(new DirectoryInfo(AppPaths.AppDataDirectory));
+            ISecureSessionStore secure = new DataProtectionSessionStore(dataProtection);
+
             var eve = new EveConnectionService(configuration, secure);
             var contactStandings = new ContactStandingIndex(eve);
             eve.ContactStandingCache = contactStandings;

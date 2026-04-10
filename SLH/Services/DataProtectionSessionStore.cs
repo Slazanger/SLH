@@ -1,19 +1,24 @@
-using System.Security.Cryptography;
+using System.IO;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.DataProtection;
 using SLH.Models;
-
-using System.Runtime.Versioning;
 
 namespace SLH.Services;
 
-[SupportedOSPlatform("windows")]
-public sealed class SecureSessionStore
+public sealed class DataProtectionSessionStore : ISecureSessionStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
+
+    private readonly IDataProtector _protector;
+
+    public DataProtectionSessionStore(IDataProtectionProvider provider)
+    {
+        _protector = provider.CreateProtector("SLH.Session");
+    }
 
     public StoredSession? Load()
     {
@@ -22,8 +27,8 @@ public sealed class SecureSessionStore
         try
         {
             var protectedBytes = File.ReadAllBytes(AppPaths.TokenPath);
-            var jsonBytes = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
-            return JsonSerializer.Deserialize<StoredSession>(Encoding.UTF8.GetString(jsonBytes), JsonOptions);
+            var json = _protector.Unprotect(Encoding.UTF8.GetString(protectedBytes));
+            return JsonSerializer.Deserialize<StoredSession>(json, JsonOptions);
         }
         catch
         {
@@ -35,7 +40,7 @@ public sealed class SecureSessionStore
     {
         Directory.CreateDirectory(AppPaths.AppDataDirectory);
         var json = JsonSerializer.Serialize(session, JsonOptions);
-        var bytes = ProtectedData.Protect(Encoding.UTF8.GetBytes(json), null, DataProtectionScope.CurrentUser);
+        var bytes = Encoding.UTF8.GetBytes(_protector.Protect(json));
         File.WriteAllBytes(AppPaths.TokenPath, bytes);
     }
 

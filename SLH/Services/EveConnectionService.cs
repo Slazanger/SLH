@@ -14,7 +14,7 @@ namespace SLH.Services;
 public sealed class EveConnectionService
 {
     private readonly IConfiguration _configuration;
-    private readonly SecureSessionStore _sessionStore;
+    private readonly ISecureSessionStore? _sessionStore;
 
     /// <summary>When set, cleared on <see cref="Logout"/> (contact standing cache).</summary>
     public IContactStandingCache? ContactStandingCache { get; set; }
@@ -56,7 +56,7 @@ public sealed class EveConnectionService
     public async Task RestoreSessionAsync(CancellationToken cancellationToken = default)
     {
         InitializeApi();
-        var stored = _sessionStore.Load();
+        var stored = _sessionStore?.Load();
         if (stored == null || string.IsNullOrWhiteSpace(stored.RefreshToken))
             return;
 
@@ -66,7 +66,7 @@ public sealed class EveConnectionService
         _sso = new SSOv2(DataSource.Tranquility, BuildCallbackUri(EsiBuildSettings.CallbackPort), EsiBuildSettings.EveClientId);
         var refreshed = await _sso.GetNewPKCEAccessAndRefreshTokenAsync(stored.RefreshToken).WaitAsync(cancellationToken);
         await ApplyTokenBundleAsync(refreshed, stored, cancellationToken).ConfigureAwait(false);
-        _sessionStore.Save(stored);
+        _sessionStore?.Save(stored);
     }
 
     public async Task LoginWithBrowserAsync(CancellationToken cancellationToken = default)
@@ -130,7 +130,7 @@ public sealed class EveConnectionService
             var tokenResponse = await _sso.VerifyAuthorizationForPKCEAuthAsync(code, verifier).WaitAsync(cancellationToken);
             var stored = new StoredSession();
             await ApplyTokenBundleAsync(tokenResponse, stored, cancellationToken).ConfigureAwait(false);
-            _sessionStore.Save(stored);
+            _sessionStore?.Save(stored);
         }
         finally
         {
@@ -141,7 +141,7 @@ public sealed class EveConnectionService
     public void Logout()
     {
         ContactStandingCache?.Clear();
-        _sessionStore.Clear();
+        _sessionStore?.Clear();
         _access = null;
         _authDto = null;
         _characterDetails = null;
@@ -163,13 +163,13 @@ public sealed class EveConnectionService
 
         _sso = new SSOv2(DataSource.Tranquility, BuildCallbackUri(EsiBuildSettings.CallbackPort), EsiBuildSettings.EveClientId);
         var refreshed = await _sso.GetNewPKCEAccessAndRefreshTokenAsync(refresh).WaitAsync(cancellationToken);
-        var stored = _sessionStore.Load() ?? new StoredSession
+        var stored = _sessionStore?.Load() ?? new StoredSession
         {
             CharacterId = _authDto.CharacterId,
             CharacterName = CharacterName
         };
         await ApplyTokenBundleAsync(refreshed, stored, cancellationToken).ConfigureAwait(false);
-        _sessionStore.Save(stored);
+        _sessionStore?.Save(stored);
     }
 
     private async Task ApplyTokenBundleAsync(AccessTokenDetails details, StoredSession stored, CancellationToken cancellationToken)
