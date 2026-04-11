@@ -8,5 +8,11 @@ public static class EsiBuildSettings
 {
     public const string EveClientId = "";
 
-    public const int CallbackPort = 49157;
+    public const int CallbackPort = 9645;
+
+    /// <summary>
+    /// Max character names per ESI <c>POST /universe/names/</c> request when bulk-resolving pasted local.
+    /// ESI enforces a low cap; adjust here if CCP changes limits.
+    /// </summary>
+    public const int UniverseNamesBulkBatchSize = 100;
 }

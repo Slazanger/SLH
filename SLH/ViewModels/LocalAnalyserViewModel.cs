@@ -4,15 +4,13 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using EVEStandard.Models;
+using SLH;
 using SLH.Services;
 
 namespace SLH.ViewModels;
 
 public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPilotDetailPanelHost
 {
-    /// <summary>ESI POST /universe/names/ rejects oversized bodies; keep batches conservative.</summary>
-    private const int BulkNamesBatchSize = 500;
-
     /// <summary>ESI POST /characters/affiliation/ accepts at most 1000 character IDs per call.</summary>
     private const int AffiliationBatchSize = 1000;
 
@@ -405,6 +403,57 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
         });
     }
 
+    /// <summary>
+    /// Resolves a chunk of names via ESI bulk POST; on failure resolves each name individually so one bad name does not block the chunk.
+    /// </summary>
+    private async Task ResolveNameChunkViaUniverseBulkAsync(List<string> chunk, CancellationToken cancellationToken)
+    {
+        void ApplyBulkModel(Universe? model)
+        {
+            if (model?.Characters == null)
+                return;
+            foreach (var c in model.Characters)
+            {
+                if (!_rows.TryGetValue(c.Name, out var row))
+                    continue;
+                row.CharacterId = c.Id;
+                row.PortraitUrl = EveImageUrls.CharacterPortrait(c.Id);
+                _diskCache.RememberCharacterId(c.Name, c.Id);
+                SyncPilotTagsFromStore(row);
+            }
+        }
+
+        try
+        {
+            var bulk = await _eve.Api.Universe.BulkNamesToIdsAsync(chunk).WaitAsync(cancellationToken).ConfigureAwait(false);
+            ApplyBulkModel(bulk.Model);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            foreach (var name in chunk)
+            {
+                try
+                {
+                    var bulk = await _eve.Api.Universe.BulkNamesToIdsAsync(new List<string> { name })
+                        .WaitAsync(cancellationToken).ConfigureAwait(false);
+                    ApplyBulkModel(bulk.Model);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch
+                {
+                    // Bad or unresolvable name — skip
+                }
+            }
+        }
+    }
+
     private async Task EnrichPendingAsync(CancellationToken cancellationToken)
     {
         await _enrichGate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -426,23 +475,12 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
             var pending = _rows.Values.Where(r => r.CharacterId is null or 0).Select(r => r.Name).Distinct().ToList();
             if (pending.Count > 0)
             {
-                for (var offset = 0; offset < pending.Count; offset += BulkNamesBatchSize)
+                var batchSize = EsiBuildSettings.UniverseNamesBulkBatchSize;
+                for (var offset = 0; offset < pending.Count; offset += batchSize)
                 {
-                    var take = Math.Min(BulkNamesBatchSize, pending.Count - offset);
+                    var take = Math.Min(batchSize, pending.Count - offset);
                     var chunk = pending.GetRange(offset, take);
-                    var bulk = await _eve.Api.Universe.BulkNamesToIdsAsync(chunk).WaitAsync(cancellationToken).ConfigureAwait(false);
-                    var model = bulk.Model;
-                    if (model?.Characters == null)
-                        continue;
-                    foreach (var c in model.Characters)
-                    {
-                        if (!_rows.TryGetValue(c.Name, out var row))
-                            continue;
-                        row.CharacterId = c.Id;
-                        row.PortraitUrl = EveImageUrls.CharacterPortrait(c.Id);
-                        _diskCache.RememberCharacterId(c.Name, c.Id);
-                        SyncPilotTagsFromStore(row);
-                    }
+                    await ResolveNameChunkViaUniverseBulkAsync(chunk, cancellationToken).ConfigureAwait(false);
                 }
             }
 
