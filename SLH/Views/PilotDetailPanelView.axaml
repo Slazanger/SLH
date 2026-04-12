@@ -133,6 +133,23 @@
                     </StackPanel>
                 </StackPanel>
 
+                <StackPanel Spacing="4" IsVisible="{Binding PilotDetail.IsCharacterResolved}">
+                    <Border Height="1" Background="#2d3d50" Margin="0,2,0,0"/>
+                    <TextBlock Text="Links" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8" Margin="0,2,0,0"/>
+                    <StackPanel Spacing="2">
+                        <HyperlinkButton Content="zKill" NavigateUri="{Binding PilotDetail.ZkillCharacterUri}"
+                                         Padding="0" HorizontalAlignment="Left" FontSize="11"/>
+                        <HyperlinkButton Content="EveWho" NavigateUri="{Binding PilotDetail.EveWhoCharacterUri}"
+                                         Padding="0" HorizontalAlignment="Left" FontSize="11"/>
+                        <HyperlinkButton Content="Dotlan (corporation)" NavigateUri="{Binding PilotDetail.DotlanCorporationUri}"
+                                         Padding="0" HorizontalAlignment="Left" FontSize="11"
+                                         IsVisible="{Binding PilotDetail.DotlanCorporationUri, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}"/>
+                        <HyperlinkButton Content="Dotlan (alliance)" NavigateUri="{Binding PilotDetail.DotlanAllianceUri}"
+                                         Padding="0" HorizontalAlignment="Left" FontSize="11"
+                                         IsVisible="{Binding PilotDetail.DotlanAllianceUri, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}"/>
+                    </StackPanel>
+                </StackPanel>
+
                 <StackPanel Spacing="4" IsVisible="{Binding ShowPilotDetailNotes}">
                     <Border Height="1" Background="#2d3d50" Margin="0,2,0,0"/>
                     <TextBlock Text="Notes" FontWeight="SemiBold" FontSize="11" Foreground="#00b8c8" Margin="0,2,0,0"/>

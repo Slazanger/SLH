@@ -177,6 +177,7 @@ public partial class CharacterLookupViewModel : ObservableObject, IDisposable, I
             }
 
             string allianceName = "", allianceTicker = "";
+            long? allianceIdResolved = null;
             try
             {
                 var aff = await _eve.Api.Character.AffiliationAsync(new List<long> { resolvedId }).WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -186,6 +187,7 @@ public partial class CharacterLookupViewModel : ObservableObject, IDisposable, I
                     _diskCache.RememberAffiliation(a.CharacterId, a.CorporationId, a.AllianceId);
                     if (a.AllianceId is { } aid && aid > 0)
                     {
+                        allianceIdResolved = aid;
                         if (_diskCache.TryGetAlliance(aid, out var at, out var an) && !string.IsNullOrWhiteSpace(at))
                         {
                             allianceTicker = at;
@@ -222,6 +224,8 @@ public partial class CharacterLookupViewModel : ObservableObject, IDisposable, I
                     CorpTicker = corpTicker,
                     AllianceName = allianceName,
                     AllianceTicker = allianceTicker,
+                    CorporationId = corpId > 0 ? corpId : null,
+                    AllianceId = allianceIdResolved,
                     PortraitUrl = EveImageUrls.CharacterPortrait(resolvedId),
                     ShowThreatPendingPlaceholder = _settings.Load().EnableZkillIntel
                 };

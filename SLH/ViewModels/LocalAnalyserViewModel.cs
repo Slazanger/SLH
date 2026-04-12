@@ -414,6 +414,8 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
                     continue;
                 if (!corpByChar.TryGetValue(charId, out var coid))
                     continue;
+                row.CorporationId = coid;
+                row.AllianceId = allianceByChar.TryGetValue(charId, out var alCached) && alCached > 0 ? alCached : null;
                 if (_diskCache.TryGetCorporation(coid, out var tick, out var corpNm) && !string.IsNullOrWhiteSpace(tick))
                 {
                     row.CorpTicker = tick;
@@ -716,6 +718,8 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
                     continue;
                 if (!corpByChar.TryGetValue(charId, out var coid))
                     continue;
+                row.CorporationId = coid;
+                row.AllianceId = allianceByChar.TryGetValue(charId, out var alFromChar) && alFromChar > 0 ? alFromChar : null;
                 if (corpTicker.TryGetValue(coid, out var tick))
                 {
                     row.CorpTicker = tick;
@@ -952,6 +956,8 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
             row.CorpName = corpDisplayName;
             row.AllianceTicker = allyTicker;
             row.AllianceName = allyDisplayName;
+            row.CorporationId = corpId;
+            row.AllianceId = allianceId is > 0 ? allianceId : null;
             UpdatePilotSubtitle(row);
 
             if (_eve.IsAuthenticated)

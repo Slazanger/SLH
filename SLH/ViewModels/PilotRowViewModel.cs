@@ -81,6 +81,10 @@ public partial class PilotRowViewModel : ObservableObject
 
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private long? _characterId;
+    /// <summary>ESI corporation id when affiliation (or public info) is known; null until resolved.</summary>
+    [ObservableProperty] private long? _corporationId;
+    /// <summary>ESI alliance id when in an alliance; null if none or not yet resolved.</summary>
+    [ObservableProperty] private long? _allianceId;
     [ObservableProperty] private string _corpTicker = "";
     [ObservableProperty] private string _corpName = "";
     [ObservableProperty] private string _allianceTicker = "";
@@ -147,6 +151,18 @@ public partial class PilotRowViewModel : ObservableObject
     public bool IsCharacterResolved => CharacterId is > 0;
 
     public bool IsCharacterUnresolved => CharacterId is not > 0;
+
+    public Uri? ZkillCharacterUri =>
+        CharacterId is { } zid && zid > 0 ? EveIntelWebUrls.ZkillCharacter(zid) : null;
+
+    public Uri? EveWhoCharacterUri =>
+        CharacterId is { } eid && eid > 0 ? EveIntelWebUrls.EveWhoCharacter(eid) : null;
+
+    public Uri? DotlanCorporationUri =>
+        CorporationId is { } cid && cid > 0 ? EveIntelWebUrls.DotlanCorporation(cid) : null;
+
+    public Uri? DotlanAllianceUri =>
+        AllianceId is { } aid && aid > 0 ? EveIntelWebUrls.DotlanAlliance(aid) : null;
 
     public bool HasCorpTicker => !string.IsNullOrWhiteSpace(CorpTicker);
 
@@ -473,8 +489,14 @@ public partial class PilotRowViewModel : ObservableObject
         OnPropertyChanged(nameof(IsCharacterResolved));
         OnPropertyChanged(nameof(IsCharacterUnresolved));
         OnPropertyChanged(nameof(ListNameOpacity));
+        OnPropertyChanged(nameof(ZkillCharacterUri));
+        OnPropertyChanged(nameof(EveWhoCharacterUri));
         RefreshRowTooltip();
     }
+
+    partial void OnCorporationIdChanged(long? value) => OnPropertyChanged(nameof(DotlanCorporationUri));
+
+    partial void OnAllianceIdChanged(long? value) => OnPropertyChanged(nameof(DotlanAllianceUri));
 
     partial void OnShowThreatPendingPlaceholderChanged(bool value)
     {
