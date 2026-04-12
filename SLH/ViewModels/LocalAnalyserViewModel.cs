@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -31,6 +32,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
     private CancellationTokenSource? _selectionRefreshCts;
     private static readonly TimeSpan SelectedPilotDiskCacheRefreshAge = TimeSpan.FromDays(1);
     private int _lastLocalCount;
+    private readonly HashSet<PilotRowViewModel> _pilotStatusBarSubscribed = new();
 
     public ObservableCollection<PilotRowViewModel> Pilots { get; } = new();
 
@@ -46,6 +48,9 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
     [ObservableProperty] private string _detailNotes = "";
     [ObservableProperty] private string _activityHeatmapUtcLine = "";
     [ObservableProperty] private bool _showLocalEmptyPlaceholder = true;
+    [ObservableProperty] private int _statusPilotCount;
+    [ObservableProperty] private int _statusRemainingCount;
+    [ObservableProperty] private int _statusErrorCount;
 
     private readonly DispatcherTimer _activityUtcTimer;
 
@@ -77,6 +82,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
         _activityUtcTimer.Tick += OnActivityUtcTick;
 
         Pilots.CollectionChanged += OnPilotsCollectionChanged;
+        RefreshStatusBar();
     }
 
     public void SyncPilotTagsFromStore(PilotRowViewModel row)
@@ -105,8 +111,95 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
         row.SetCustomTags(_characterTags.GetTags(id));
     }
 
-    private void OnPilotsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
+    private void OnPilotsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
         ShowLocalEmptyPlaceholder = Pilots.Count == 0;
+
+        switch (e.Action)
+        {
+            case NotifyCollectionChangedAction.Add:
+                if (e.NewItems != null)
+                {
+                    foreach (PilotRowViewModel r in e.NewItems)
+                    {
+                        if (_pilotStatusBarSubscribed.Add(r))
+                            r.PropertyChanged += OnPilotRowPropertyChanged;
+                    }
+                }
+                break;
+            case NotifyCollectionChangedAction.Remove:
+                if (e.OldItems != null)
+                {
+                    foreach (PilotRowViewModel r in e.OldItems)
+                    {
+                        r.PropertyChanged -= OnPilotRowPropertyChanged;
+                        _pilotStatusBarSubscribed.Remove(r);
+                    }
+                }
+                break;
+            case NotifyCollectionChangedAction.Replace:
+                if (e.OldItems != null)
+                {
+                    foreach (PilotRowViewModel r in e.OldItems)
+                    {
+                        r.PropertyChanged -= OnPilotRowPropertyChanged;
+                        _pilotStatusBarSubscribed.Remove(r);
+                    }
+                }
+                if (e.NewItems != null)
+                {
+                    foreach (PilotRowViewModel r in e.NewItems)
+                    {
+                        if (_pilotStatusBarSubscribed.Add(r))
+                            r.PropertyChanged += OnPilotRowPropertyChanged;
+                    }
+                }
+                break;
+            case NotifyCollectionChangedAction.Reset:
+                foreach (var r in _pilotStatusBarSubscribed.ToArray())
+                {
+                    r.PropertyChanged -= OnPilotRowPropertyChanged;
+                    _pilotStatusBarSubscribed.Remove(r);
+                }
+                foreach (var r in Pilots)
+                {
+                    if (_pilotStatusBarSubscribed.Add(r))
+                        r.PropertyChanged += OnPilotRowPropertyChanged;
+                }
+                break;
+            case NotifyCollectionChangedAction.Move:
+                break;
+        }
+
+        RefreshStatusBar();
+    }
+
+    private void OnPilotRowPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(PilotRowViewModel.CharacterId) or nameof(PilotRowViewModel.NameResolutionFailed)
+            or nameof(PilotRowViewModel.ShowThreatPendingPlaceholder))
+            _ = Dispatcher.UIThread.InvokeAsync(RefreshStatusBar);
+    }
+
+    private void RefreshStatusBar()
+    {
+        var zkillIntelOn = _settings.Load().EnableZkillIntel;
+        var remaining = 0;
+        var errors = 0;
+        foreach (var row in Pilots)
+        {
+            if (row.NameResolutionFailed)
+                errors++;
+            else if (row.CharacterId is not > 0)
+                remaining++;
+            else if (zkillIntelOn && row.ShowThreatPendingPlaceholder)
+                remaining++;
+        }
+
+        StatusPilotCount = Pilots.Count;
+        StatusRemainingCount = remaining;
+        StatusErrorCount = errors;
+    }
 
     private void OnActivityUtcTick(object? sender, EventArgs e)
     {
@@ -161,6 +254,7 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
         if (SelectedPilot != null && !Pilots.Contains(SelectedPilot))
             SelectedPilot = null;
         UpdateHeaderCount();
+        RefreshStatusBar();
     }
 
     private bool ShouldHidePilot(PilotRowViewModel row)
@@ -237,7 +331,11 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
     public void ApplyLocalText(string? text)
     {
         foreach (var name in LocalChatParser.ParseNameList(text ?? ""))
+        {
             AddOrKeepPilot(name);
+            if (_rows.TryGetValue(name, out var row))
+                row.NameResolutionFailed = false;
+        }
         TryApplyDiskCacheStandingsAndRebuild();
         ScheduleEnrich(debounceMs: 0);
     }
@@ -423,10 +521,22 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
             }
         }
 
+        void MarkUnresolvedInChunkAsFailed()
+        {
+            foreach (var name in chunk)
+            {
+                if (!_rows.TryGetValue(name, out var row))
+                    continue;
+                if (row.CharacterId is not > 0)
+                    row.NameResolutionFailed = true;
+            }
+        }
+
         try
         {
             var bulk = await _eve.Api.Universe.BulkNamesToIdsAsync(chunk).WaitAsync(cancellationToken).ConfigureAwait(false);
             ApplyBulkModel(bulk.Model);
+            MarkUnresolvedInChunkAsFailed();
         }
         catch (OperationCanceledException)
         {
@@ -441,6 +551,8 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
                     var bulk = await _eve.Api.Universe.BulkNamesToIdsAsync(new List<string> { name })
                         .WaitAsync(cancellationToken).ConfigureAwait(false);
                     ApplyBulkModel(bulk.Model);
+                    if (_rows.TryGetValue(name, out var row) && row.CharacterId is not > 0)
+                        row.NameResolutionFailed = true;
                 }
                 catch (OperationCanceledException)
                 {
@@ -448,10 +560,13 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
                 }
                 catch
                 {
-                    // Bad or unresolvable name — skip
+                    if (_rows.TryGetValue(name, out var row))
+                        row.NameResolutionFailed = true;
                 }
             }
         }
+
+        await Dispatcher.UIThread.InvokeAsync(RefreshStatusBar);
     }
 
     private async Task EnrichPendingAsync(CancellationToken cancellationToken)
@@ -460,6 +575,9 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
         try
         {
             _eve.InitializeApi();
+            foreach (var row in _rows.Values.Where(r => r.CharacterId is null or 0))
+                row.NameResolutionFailed = false;
+
             var pendingNames = _rows.Values.Where(r => r.CharacterId is null or 0).Select(r => r.Name).Distinct().ToList();
             foreach (var nm in pendingNames)
             {
@@ -857,6 +975,11 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
 
     public void Dispose()
     {
+        foreach (var r in _pilotStatusBarSubscribed.ToArray())
+        {
+            r.PropertyChanged -= OnPilotRowPropertyChanged;
+            _pilotStatusBarSubscribed.Remove(r);
+        }
         Pilots.CollectionChanged -= OnPilotsCollectionChanged;
         _watcher.NewLines -= OnLogLines;
         _watcher.Dispose();

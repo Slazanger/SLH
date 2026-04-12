@@ -24,7 +24,9 @@
         </ContextMenu>
     </UserControl.Resources>
 
-    <Grid Margin="0,2,0,0" MinHeight="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+    <Grid Margin="0,2,0,0" MinHeight="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+          RowDefinitions="*,Auto">
+        <Grid Grid.Row="0" MinHeight="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" MinWidth="200"/>
             <ColumnDefinition Width="4"/>
@@ -184,6 +186,27 @@
             <ScrollViewer Padding="0,0,0,8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <views:PilotDetailPanelView HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
             </ScrollViewer>
+        </Border>
+        </Grid>
+
+        <Border Grid.Row="1" Classes="glass" Padding="8,5" Margin="0,4,0,0"
+                BorderBrush="#2d3d50" BorderThickness="0,1,0,0" Background="#0a1016">
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="Pilots:" FontSize="11" Foreground="#8a9aaa" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding StatusPilotCount}" FontSize="11" Foreground="#d0dae8" VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Text="|" FontSize="11" Foreground="#3d4d60" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="Remaining:" FontSize="11" Foreground="#8a9aaa" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding StatusRemainingCount}" FontSize="11" Foreground="#d0dae8" VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Text="|" FontSize="11" Foreground="#3d4d60" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="Errors:" FontSize="11" Foreground="#8a9aaa" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding StatusErrorCount}" FontSize="11" Foreground="#d0dae8" VerticalAlignment="Center"/>
+                </StackPanel>
+            </StackPanel>
         </Border>
     </Grid>
 </UserControl>

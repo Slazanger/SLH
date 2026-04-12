@@ -117,6 +117,9 @@ public partial class PilotRowViewModel : ObservableObject
     /// <summary>True while zKill intel is on and this row has not finished a threat fetch (success or failed).</summary>
     [ObservableProperty] private bool _showThreatPendingPlaceholder;
 
+    /// <summary>ESI name-to-ID lookup could not resolve this pilot name.</summary>
+    [ObservableProperty] private bool _nameResolutionFailed;
+
     [ObservableProperty] private bool _tagFc;
     /// <summary>FC suggested by zKill (Monitor in top ships); not persisted in <see cref="CharacterTagStore"/>.</summary>
     [ObservableProperty] private bool _tagFcFromZkill;
@@ -465,6 +468,8 @@ public partial class PilotRowViewModel : ObservableObject
 
     partial void OnCharacterIdChanged(long? value)
     {
+        if (value is > 0)
+            NameResolutionFailed = false;
         OnPropertyChanged(nameof(IsCharacterResolved));
         OnPropertyChanged(nameof(IsCharacterUnresolved));
         OnPropertyChanged(nameof(ListNameOpacity));
