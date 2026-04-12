@@ -10,7 +10,8 @@
     <ScrollViewer HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <StackPanel Spacing="6" Margin="0,2,0,0">
             <StackPanel Orientation="Horizontal" Spacing="4">
-                <TextBox Watermark="Character" Text="{Binding SearchName}" MinWidth="200"/>
+                <TextBox Watermark="Character" Text="{Binding SearchName}" MinWidth="200"
+                         KeyDown="OnSearchNameKeyDown"/>
                 <Button Content="Look up" Command="{Binding LookupCommand}"/>
             </StackPanel>
             <TextBlock Text="{Binding Status}" Foreground="#F57C00" TextWrapping="Wrap" FontSize="10"
