@@ -164,6 +164,14 @@ public partial class PilotRowViewModel : ObservableObject
     public Uri? DotlanAllianceUri =>
         AllianceId is { } aid && aid > 0 ? EveIntelWebUrls.DotlanAlliance(aid) : null;
 
+    /// <summary>Hyperlink caption for Dotlan corporation map; uses resolved corp name when known.</summary>
+    public string DotlanCorporationLinkLabel =>
+        string.IsNullOrWhiteSpace(CorpName) ? "Dotlan (corporation)" : $"Dotlan ({CorpName.Trim()})";
+
+    /// <summary>Hyperlink caption for Dotlan alliance map; uses resolved alliance name when known.</summary>
+    public string DotlanAllianceLinkLabel =>
+        string.IsNullOrWhiteSpace(AllianceName) ? "Dotlan (alliance)" : $"Dotlan ({AllianceName.Trim()})";
+
     public bool HasCorpTicker => !string.IsNullOrWhiteSpace(CorpTicker);
 
     public bool HasAllianceTicker => !string.IsNullOrWhiteSpace(AllianceTicker);
@@ -401,6 +409,7 @@ public partial class PilotRowViewModel : ObservableObject
 
     partial void OnCorpNameChanged(string value)
     {
+        OnPropertyChanged(nameof(DotlanCorporationLinkLabel));
         RefreshOrgDetailLines();
         RefreshRowTooltip();
     }
@@ -414,6 +423,7 @@ public partial class PilotRowViewModel : ObservableObject
 
     partial void OnAllianceNameChanged(string value)
     {
+        OnPropertyChanged(nameof(DotlanAllianceLinkLabel));
         RefreshOrgDetailLines();
         RefreshRowTooltip();
     }
@@ -494,9 +504,17 @@ public partial class PilotRowViewModel : ObservableObject
         RefreshRowTooltip();
     }
 
-    partial void OnCorporationIdChanged(long? value) => OnPropertyChanged(nameof(DotlanCorporationUri));
+    partial void OnCorporationIdChanged(long? value)
+    {
+        OnPropertyChanged(nameof(DotlanCorporationUri));
+        OnPropertyChanged(nameof(DotlanCorporationLinkLabel));
+    }
 
-    partial void OnAllianceIdChanged(long? value) => OnPropertyChanged(nameof(DotlanAllianceUri));
+    partial void OnAllianceIdChanged(long? value)
+    {
+        OnPropertyChanged(nameof(DotlanAllianceUri));
+        OnPropertyChanged(nameof(DotlanAllianceLinkLabel));
+    }
 
     partial void OnShowThreatPendingPlaceholderChanged(bool value)
     {

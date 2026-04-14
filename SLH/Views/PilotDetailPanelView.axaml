@@ -141,10 +141,10 @@
                                          Padding="0" HorizontalAlignment="Left" FontSize="11"/>
                         <HyperlinkButton Content="EveWho" NavigateUri="{Binding PilotDetail.EveWhoCharacterUri}"
                                          Padding="0" HorizontalAlignment="Left" FontSize="11"/>
-                        <HyperlinkButton Content="Dotlan (corporation)" NavigateUri="{Binding PilotDetail.DotlanCorporationUri}"
+                        <HyperlinkButton Content="{Binding PilotDetail.DotlanCorporationLinkLabel}" NavigateUri="{Binding PilotDetail.DotlanCorporationUri}"
                                          Padding="0" HorizontalAlignment="Left" FontSize="11"
                                          IsVisible="{Binding PilotDetail.DotlanCorporationUri, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}"/>
-                        <HyperlinkButton Content="Dotlan (alliance)" NavigateUri="{Binding PilotDetail.DotlanAllianceUri}"
+                        <HyperlinkButton Content="{Binding PilotDetail.DotlanAllianceLinkLabel}" NavigateUri="{Binding PilotDetail.DotlanAllianceUri}"
                                          Padding="0" HorizontalAlignment="Left" FontSize="11"
                                          IsVisible="{Binding PilotDetail.DotlanAllianceUri, Converter={x:Static avalconv:ObjectConverters.IsNotNull}}"/>
                     </StackPanel>
