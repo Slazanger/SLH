@@ -40,12 +40,14 @@ function Invoke-SlhPublish {
         [string] $Destination,
         [bool] $SelfContained
     )
-    $sc = if ($SelfContained) { "true" } else { "false" }
-    Write-Host "Publishing $Rid (self-contained=$sc) -> $Destination"
+    # `-p:SelfContained=...` is reliable; CLI `--self-contained false` does not disable SC; splatting here reached MSBuild as per-character args.
+    $scLabel = if ($SelfContained) { "true" } else { "false" }
+    Write-Host "Publishing $Rid (self-contained=$scLabel) -> $Destination"
+    $scProp = if ($SelfContained) { "true" } else { "false" }
     dotnet publish $project `
         -c Release `
         -r $Rid `
-        --self-contained $sc `
+        "-p:SelfContained=$scProp" `
         -p:PublishSingleFile=true `
         -p:IncludeNativeLibrariesForSelfExtract=true `
         -o $Destination
