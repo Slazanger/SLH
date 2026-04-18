@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using EVEStandard.Models;
 using SLH;
+using SLH.Models;
 using SLH.Services;
 
 namespace SLH.ViewModels;
@@ -33,6 +34,8 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
     private static readonly TimeSpan SelectedPilotDiskCacheRefreshAge = TimeSpan.FromDays(1);
     private int _lastLocalCount;
     private readonly HashSet<PilotRowViewModel> _pilotStatusBarSubscribed = new();
+    private readonly HashSet<PilotRowViewModel> _sortKeySubscribed = new();
+    private readonly DispatcherTimer _resortDebounceTimer;
 
     public ObservableCollection<PilotRowViewModel> Pilots { get; } = new();
 
@@ -51,8 +54,17 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
     [ObservableProperty] private int _statusPilotCount;
     [ObservableProperty] private int _statusRemainingCount;
     [ObservableProperty] private int _statusErrorCount;
+    [ObservableProperty] private LocalPilotSortMode _localPilotSort;
 
     private readonly DispatcherTimer _activityUtcTimer;
+
+    public bool SortChipNameSelected => LocalPilotSort == LocalPilotSortMode.Name;
+
+    public bool SortChipCorpSelected => LocalPilotSort == LocalPilotSortMode.Corporation;
+
+    public bool SortChipAllianceSelected => LocalPilotSort == LocalPilotSortMode.Alliance;
+
+    public bool SortChipThreatSelected => LocalPilotSort == LocalPilotSortMode.Threat;
 
     public LocalAnalyserViewModel(
         EveConnectionService eve,
@@ -78,11 +90,151 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
         _watcher = watcher;
         _watcher.NewLines += OnLogLines;
 
+        _localPilotSort = _settings.Load().LocalPilotSort;
+
+        _resortDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+        _resortDebounceTimer.Tick += OnResortDebounceTick;
+
         _activityUtcTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
         _activityUtcTimer.Tick += OnActivityUtcTick;
 
         Pilots.CollectionChanged += OnPilotsCollectionChanged;
         RefreshStatusBar();
+        NotifySortChipProperties();
+    }
+
+    [RelayCommand]
+    private void SetLocalPilotSort(LocalPilotSortMode mode) => LocalPilotSort = mode;
+
+    private void NotifySortChipProperties()
+    {
+        OnPropertyChanged(nameof(SortChipNameSelected));
+        OnPropertyChanged(nameof(SortChipCorpSelected));
+        OnPropertyChanged(nameof(SortChipAllianceSelected));
+        OnPropertyChanged(nameof(SortChipThreatSelected));
+    }
+
+    partial void OnLocalPilotSortChanged(LocalPilotSortMode value)
+    {
+        var s = _settings.Load();
+        s.LocalPilotSort = value;
+        _settings.Save(s);
+        ResortPilotOrder();
+        RebuildVisiblePilotsList();
+        NotifySortChipProperties();
+    }
+
+    private void SubscribeRowSortKeys(PilotRowViewModel row)
+    {
+        if (_sortKeySubscribed.Add(row))
+            row.PropertyChanged += OnPilotRowSortKeysChanged;
+    }
+
+    private void UnsubscribeRowSortKeys(PilotRowViewModel row)
+    {
+        if (_sortKeySubscribed.Remove(row))
+            row.PropertyChanged -= OnPilotRowSortKeysChanged;
+    }
+
+    private void OnPilotRowSortKeysChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is not { } p || !PropertyAffectsCurrentSort(p))
+            return;
+        ScheduleResortDebounced();
+    }
+
+    private bool PropertyAffectsCurrentSort(string p) =>
+        LocalPilotSort switch
+        {
+            LocalPilotSortMode.Name => p == nameof(PilotRowViewModel.Name),
+            LocalPilotSortMode.Corporation => p is nameof(PilotRowViewModel.CorpTicker) or nameof(PilotRowViewModel.CorpName),
+            LocalPilotSortMode.Alliance => p is nameof(PilotRowViewModel.AllianceTicker) or nameof(PilotRowViewModel.AllianceName),
+            LocalPilotSortMode.Threat => p is nameof(PilotRowViewModel.ThreatScore) or nameof(PilotRowViewModel.ShowThreatPendingPlaceholder),
+            _ => false
+        };
+
+    private void ScheduleResortDebounced()
+    {
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            _resortDebounceTimer.Stop();
+            _resortDebounceTimer.Start();
+        });
+    }
+
+    private void OnResortDebounceTick(object? sender, EventArgs e)
+    {
+        _resortDebounceTimer.Stop();
+        ResortPilotOrder();
+        RebuildVisiblePilotsList();
+    }
+
+    private void ResortPilotOrder()
+    {
+        if (_pilotOrder.Count <= 1)
+            return;
+
+        Comparison<string> cmp = LocalPilotSort switch
+        {
+            LocalPilotSortMode.Name => ComparePilotOrderByName,
+            LocalPilotSortMode.Corporation => ComparePilotOrderByCorp,
+            LocalPilotSortMode.Alliance => ComparePilotOrderByAlliance,
+            LocalPilotSortMode.Threat => ComparePilotOrderByThreat,
+            _ => ComparePilotOrderByName
+        };
+
+        var names = _pilotOrder.ToList();
+        names.Sort(cmp);
+        _pilotOrder.Clear();
+        _pilotOrder.AddRange(names);
+    }
+
+    private int ComparePilotOrderByName(string na, string nb)
+    {
+        if (!_rows.TryGetValue(na, out var ra) || !_rows.TryGetValue(nb, out var rb))
+            return 0;
+        return StringComparer.OrdinalIgnoreCase.Compare(ra.Name, rb.Name);
+    }
+
+    private static string CorpOrAllianceSortKey(string ticker, string name)
+    {
+        var t = (ticker ?? "").Trim();
+        if (t.Length > 0)
+            return t;
+        var n = (name ?? "").Trim();
+        if (n.Length > 0)
+            return n;
+        return "\uFFFF";
+    }
+
+    private int ComparePilotOrderByCorp(string na, string nb)
+    {
+        if (!_rows.TryGetValue(na, out var ra) || !_rows.TryGetValue(nb, out var rb))
+            return 0;
+        var ka = CorpOrAllianceSortKey(ra.CorpTicker, ra.CorpName);
+        var kb = CorpOrAllianceSortKey(rb.CorpTicker, rb.CorpName);
+        var c = StringComparer.OrdinalIgnoreCase.Compare(ka, kb);
+        return c != 0 ? c : StringComparer.OrdinalIgnoreCase.Compare(ra.Name, rb.Name);
+    }
+
+    private int ComparePilotOrderByAlliance(string na, string nb)
+    {
+        if (!_rows.TryGetValue(na, out var ra) || !_rows.TryGetValue(nb, out var rb))
+            return 0;
+        var ka = CorpOrAllianceSortKey(ra.AllianceTicker, ra.AllianceName);
+        var kb = CorpOrAllianceSortKey(rb.AllianceTicker, rb.AllianceName);
+        var c = StringComparer.OrdinalIgnoreCase.Compare(ka, kb);
+        return c != 0 ? c : StringComparer.OrdinalIgnoreCase.Compare(ra.Name, rb.Name);
+    }
+
+    private int ComparePilotOrderByThreat(string na, string nb)
+    {
+        if (!_rows.TryGetValue(na, out var ra) || !_rows.TryGetValue(nb, out var rb))
+            return 0;
+        var sa = ra.ShowThreatPendingPlaceholder ? -1 : ra.ThreatScore;
+        var sb = rb.ShowThreatPendingPlaceholder ? -1 : rb.ThreatScore;
+        var c = sb.CompareTo(sa);
+        return c != 0 ? c : StringComparer.OrdinalIgnoreCase.Compare(ra.Name, rb.Name);
     }
 
     public void SyncPilotTagsFromStore(PilotRowViewModel row)
@@ -344,12 +496,14 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
     private void ClearLocal()
     {
         foreach (var row in _rows.Values)
+        {
+            UnsubscribeRowSortKeys(row);
             row.ReleaseResources();
+        }
         _rows.Clear();
         _pilotOrder.Clear();
-        Pilots.Clear();
         SelectedPilot = null;
-        UpdateHeaderCount();
+        RebuildVisiblePilotsList();
     }
 
     private void OnLogLines(object? sender, IReadOnlyList<string> lines)
@@ -454,8 +608,9 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
         row.ShowThreatPendingPlaceholder = _settings.Load().EnableZkillIntel;
         _rows[name] = row;
         _pilotOrder.Add(name);
-        if (!ShouldHidePilot(row))
-            Pilots.Add(row);
+        SubscribeRowSortKeys(row);
+        ResortPilotOrder();
+        RebuildVisiblePilotsList();
     }
 
     private static void UpdatePilotSubtitle(PilotRowViewModel row)
@@ -472,13 +627,13 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
     {
         if (!_rows.TryGetValue(name, out var row))
             return;
+        UnsubscribeRowSortKeys(row);
         row.ReleaseResources();
         _rows.Remove(name);
         _pilotOrder.Remove(name);
-        Pilots.Remove(row);
         if (SelectedPilot == row)
             SelectedPilot = null;
-        UpdateHeaderCount();
+        RebuildVisiblePilotsList();
     }
 
     private void ScheduleEnrich(int debounceMs = 600)
@@ -981,6 +1136,13 @@ public partial class LocalAnalyserViewModel : ObservableObject, IDisposable, IPi
 
     public void Dispose()
     {
+        _resortDebounceTimer.Stop();
+        _resortDebounceTimer.Tick -= OnResortDebounceTick;
+        foreach (var r in _sortKeySubscribed.ToArray())
+        {
+            r.PropertyChanged -= OnPilotRowSortKeysChanged;
+            _sortKeySubscribed.Remove(r);
+        }
         foreach (var r in _pilotStatusBarSubscribed.ToArray())
         {
             r.PropertyChanged -= OnPilotRowPropertyChanged;

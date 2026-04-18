@@ -3,8 +3,11 @@
              xmlns:avalconv="using:Avalonia.Data.Converters"
              xmlns:slh="using:SLH.Converters"
              xmlns:vm="using:SLH.ViewModels"
+             xmlns:models="using:SLH.Models"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:services="using:SLH.Services"
              xmlns:views="using:SLH.Views"
+             d:DesignWidth="680" d:DesignHeight="480"
              x:Class="SLH.Views.LocalAnalyserView"
              x:DataType="vm:LocalAnalyserViewModel"
              HorizontalAlignment="Stretch"
@@ -191,22 +194,46 @@
 
         <Border Grid.Row="1" Classes="glass" Padding="8,5" Margin="0,4,0,0"
                 BorderBrush="#2d3d50" BorderThickness="0,1,0,0" Background="#0a1016">
-            <StackPanel Orientation="Horizontal" Spacing="16">
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="Pilots:" FontSize="11" Foreground="#8a9aaa" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding StatusPilotCount}" FontSize="11" Foreground="#d0dae8" VerticalAlignment="Center"/>
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="Pilots:" FontSize="11" Foreground="#8a9aaa" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding StatusPilotCount}" FontSize="11" Foreground="#d0dae8" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="|" FontSize="11" Foreground="#3d4d60" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="Remaining:" FontSize="11" Foreground="#8a9aaa" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding StatusRemainingCount}" FontSize="11" Foreground="#d0dae8" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="|" FontSize="11" Foreground="#3d4d60" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="Errors:" FontSize="11" Foreground="#8a9aaa" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding StatusErrorCount}" FontSize="11" Foreground="#d0dae8" VerticalAlignment="Center"/>
+                    </StackPanel>
                 </StackPanel>
-                <TextBlock Text="|" FontSize="11" Foreground="#3d4d60" VerticalAlignment="Center"/>
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="Remaining:" FontSize="11" Foreground="#8a9aaa" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding StatusRemainingCount}" FontSize="11" Foreground="#d0dae8" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="2" Margin="16,0,0,0">
+                    <TextBlock Text="Sort by:" Foreground="#8a9aaa" FontSize="10" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <Button Classes="sort-chip" Classes.sort-chip-selected="{Binding SortChipNameSelected}"
+                            Command="{Binding SetLocalPilotSortCommand}" CommandParameter="{x:Static models:LocalPilotSortMode.Name}">
+                        <TextBlock Text="Name"/>
+                    </Button>
+                    <TextBlock Text="/" Foreground="#5a6a78" FontSize="10" VerticalAlignment="Center" Margin="4,0"/>
+                    <Button Classes="sort-chip" Classes.sort-chip-selected="{Binding SortChipCorpSelected}"
+                            Command="{Binding SetLocalPilotSortCommand}" CommandParameter="{x:Static models:LocalPilotSortMode.Corporation}">
+                        <TextBlock Text="Corp"/>
+                    </Button>
+                    <TextBlock Text="/" Foreground="#5a6a78" FontSize="10" VerticalAlignment="Center" Margin="4,0"/>
+                    <Button Classes="sort-chip" Classes.sort-chip-selected="{Binding SortChipAllianceSelected}"
+                            Command="{Binding SetLocalPilotSortCommand}" CommandParameter="{x:Static models:LocalPilotSortMode.Alliance}">
+                        <TextBlock Text="Alliance"/>
+                    </Button>
+                    <TextBlock Text="/" Foreground="#5a6a78" FontSize="10" VerticalAlignment="Center" Margin="4,0"/>
+                    <Button Classes="sort-chip" Classes.sort-chip-selected="{Binding SortChipThreatSelected}"
+                            Command="{Binding SetLocalPilotSortCommand}" CommandParameter="{x:Static models:LocalPilotSortMode.Threat}">
+                        <TextBlock Text="Threat"/>
+                    </Button>
                 </StackPanel>
-                <TextBlock Text="|" FontSize="11" Foreground="#3d4d60" VerticalAlignment="Center"/>
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="Errors:" FontSize="11" Foreground="#8a9aaa" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding StatusErrorCount}" FontSize="11" Foreground="#d0dae8" VerticalAlignment="Center"/>
-                </StackPanel>
-            </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>

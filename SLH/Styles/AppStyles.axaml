@@ -102,4 +102,30 @@
         <Setter Property="BorderBrush" Value="#2d3d50"/>
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
+
+    <Style Selector="Button.sort-chip">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0,0,0,2"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="Padding" Value="4,2"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.sort-chip /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.sort-chip:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.sort-chip > TextBlock">
+        <Setter Property="Foreground" Value="#8a9aaa"/>
+        <Setter Property="FontSize" Value="10"/>
+    </Style>
+    <Style Selector="Button.sort-chip.sort-chip-selected > TextBlock">
+        <Setter Property="Foreground" Value="#e8eef5"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Button.sort-chip.sort-chip-selected">
+        <Setter Property="BorderBrush" Value="#9C27B0"/>
+    </Style>
 </Styles>

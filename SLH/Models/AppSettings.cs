@@ -17,4 +17,7 @@ public sealed class AppSettings
 
     /// <summary>Uniform UI scale for the main window content. Clamped to <see cref="UiScaleMin"/>–<see cref="UiScaleMax"/> when loaded/saved.</summary>
     public double UiScale { get; set; } = 1.0;
+
+    /// <summary>Primary sort order for pilots on the Local tab.</summary>
+    public LocalPilotSortMode LocalPilotSort { get; set; } = LocalPilotSortMode.Name;
 }
